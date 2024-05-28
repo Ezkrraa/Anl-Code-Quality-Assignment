@@ -8,11 +8,20 @@ import bcrypt
 import atexit
 
 
-def unlock_account(uname):
+def unlock_account(adminname, accountname):
     cur = db.database_connection.cursor()
-    cur.execute("UPDATE users SET failedlogins = 0 WHERE username=?", (uname,))
+    admin: db.User = cur.execute(
+        "SELECT * FROM users WHERE username = ?", (adminname,)
+    ).fetchone()
+    if not admin.isadmin:
+        db.write_log_short(
+            3,
+            f"user {admin.username} tried to unlock {accountname}'s account, but is not an admin.",
+        )  # should not be possible to do, since I shouldn't be calling this function with a non-admin at all
+        return
+    cur.execute("UPDATE users SET failedlogins = 0 WHERE username=?", (accountname,))
     db.database_connection.commit()
-    print(f"unlocked account {uname}")
+    db.write_log_short(6, f"{admin.username} unlocked {accountname}'s account.")
 
 
 def exit_handler():
@@ -29,8 +38,7 @@ if __name__ == "__main__":
         == None
     ):
         db.seed_database()
-        print("seeded DB, was empty")
-    # create_test_user()
+    db.create_test_admin()
     # unlock_account("test")
     console.login_screen()
 

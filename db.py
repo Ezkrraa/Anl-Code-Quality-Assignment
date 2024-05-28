@@ -55,8 +55,19 @@ class User:
     def fromtuple(cls, data: tuple[str, str, int, bool]):
         return cls(data[0], data[1], data[2], bool(data[3]))
 
+    @classmethod
+    def genRandom(self):
+        self.username = fake.catch_phrase()
+        self.password = bcrypt.hashpw("password123".encode("utf-8"), bcrypt.gensalt())
+        self.failedattempts = 0
+        self.isadmin = False
+        return self
+
     def toTuple(self) -> tuple[str, str, int, bool]:
         return (self.username, self.password, self.failedattempts, self.isadmin)
+
+    def __str__(self) -> str:
+        return f"Name: {self.username}\nIs admin: {self.isadmin}\nFailed login attempts: {self.failedattempts}"
 
 
 class Member:
@@ -125,10 +136,9 @@ def setup_database() -> None:
     global database_connection
     try:
         database_connection = sqlite3.connect("database.db")
-        print("Found database, version: " + sqlite3.sqlite_version)
+        write_log_short(6, f"starting up using sqlite v{sqlite3.sqlite_version}")
     except sqlite3.Error as e:
-        print("couldn't connect, got error: ")
-        print(e)
+        write_log_short(2, f"Failed to connect to database, got error {e}")
     finally:
         if database_connection:
             create_tables()
@@ -170,18 +180,18 @@ def create_tables():
     except sqlite3.Error as e:
         write_log_short(f"Tried to seed database, but ran into error {e}")
     finally:
-        write_log_short(5, "Successfully created database, since none was found.")
+        write_log_short(6, "Successfully seeded database (this happens at any startup)")
     database_connection.commit()
 
 
-def create_test_user(
+def create_test_admin(
     uname="test", testpw="password123", failedattempts=0, isadmin=True
 ):
     "creates a default test user"
 
     bcryptpass = bcrypt.hashpw(testpw.encode("utf-8"), bcrypt.gensalt())
     cur = database_connection.cursor()
-    if cur.execute("SELECT 1 FROM users").fetchall() != None:
+    if cur.execute("SELECT 1 FROM users WHERE isadmin = 1").fetchone() != None:
         write_log_short(
             6, "Was told to make a new user for testing, but users table wasn't empty"
         )
@@ -206,9 +216,11 @@ def seed_database():
     cursor.executemany(
         "INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", seed_members
     )
+    seed_users = [User.toTuple(User.genRandom()) for _ in range(20)]
+    cursor.executemany("INSERT INTO users VALUES(?, ?, ?, ?)", seed_users)
     database_connection.commit()
     write_log_short(6, "Successfully seeded members table")
-    create_test_user()
+    create_test_admin()
 
 
 def gen_memberid() -> str:
@@ -229,8 +241,23 @@ def gen_memberid() -> str:
             return new_id
 
 
+def get_all_users(include_admins=False) -> list[User]:
+    cur = database_connection.cursor()
+    if include_admins:
+        users = cur.execute("SELECT * FROM users").fetchall()
+    else:
+        users = cur.execute(
+            "SELECT * FROM users WHERE isadmin = 0 ORDER BY username"
+        ).fetchall()
+    return [User.fromtuple(data) for data in users]
+
+
 def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
     "Returns an exception or a User, depending on success"
+
+    uname = uname.lower()
+    if uname == "super_admin" and attemptPassword == "Admin_123?":
+        return Exception("SuperAdmin")
     cursor = database_connection.cursor()
     output = cursor.execute(
         "SELECT * FROM Users WHERE Username = ?", (uname,)
@@ -241,6 +268,9 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
 
     usr: User = User.fromtuple(data=output)
     if usr.failedattempts >= 3:
+        write_log_short(
+            6, f"Attempted to log into account {uname}, but already failed thrice."
+        )
         return Exception("TooManyFailedAttempts")
     elif not bcrypt.checkpw(attemptPassword.encode("utf-8"), usr.password):
         cursor.execute(
@@ -248,6 +278,7 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
             (uname,),
         )
         database_connection.commit()
+        write_log_short(6, f"Failed attempt to log into account {uname}")
         return Exception("WrongPassword")
     else:
         return usr
@@ -260,6 +291,6 @@ def write_log_short(severity: int, desc: str):
 
 def write_log(logpoint: LogPoint):
     cursor = database_connection.cursor()
-    input(logpoint.toTuple())
+    # input(logpoint.toTuple())
     cursor.execute("INSERT INTO logs VALUES(?, ?, ?, ?)", logpoint.toTuple())
     database_connection.commit()

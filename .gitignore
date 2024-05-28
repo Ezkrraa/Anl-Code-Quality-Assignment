@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,visualstudiocode
 
+# ignore dbs
+*.db
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -193,3 +196,4 @@ pyrightconfig.json
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode
+database-old.db
