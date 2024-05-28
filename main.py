@@ -1,6 +1,8 @@
 # import my own files
 import db
 import console
+from uuid import uuid4
+import bcrypt
 
 # for closing the db connection on exit
 import atexit
@@ -13,21 +15,6 @@ def unlock_account(uname):
     print(f"unlocked account {uname}")
 
 
-def create_test_user(
-    uname="test", testpw="password123", failedattempts=0, isadmin=True
-):
-    import bcrypt
-
-    "creates a default test user"
-    bcryptpass = bcrypt.hashpw(testpw.encode("utf-8"), bcrypt.gensalt())
-    cur = db.database_connection.cursor()
-    cur.execute(
-        "INSERT INTO users VALUES(?, ?, ?, ?)",
-        (uname, bcryptpass, failedattempts, isadmin),
-    )
-    db.database_connection.commit()
-
-
 def exit_handler():
     """Runs on close, closes the database connection"""
     if db.database_connection:
@@ -37,7 +24,10 @@ def exit_handler():
 if __name__ == "__main__":
     atexit.register(exit_handler)
     db.setup_database()
-    if db.database_connection.cursor().execute("SELECT 1 FROM users") == None:
+    if (
+        db.database_connection.cursor().execute("SELECT 1 FROM users").fetchone()
+        == None
+    ):
         db.seed_database()
         print("seeded DB, was empty")
     # create_test_user()
@@ -79,7 +69,7 @@ if __name__ == "__main__":
 ## logs
 # ID, UUIDv4
 # Timestamp, format YYYY-MM-DD HH:mm:SS (ex. 2023-09-14 22:26:47)
-# Severity, integer (0-7), ACCORDING TO CCNA specifications. Will not use 0 or 6-7
+# Severity, integer (0-7), ACCORDING TO CCNA specifications. Will not use 0 or 7
 #    0: emerg    emergency      system is unstable (should not be used by applications)
 #    1: alert    alert          should be corrected immediately
 #    2: crit     critical       critical conditions

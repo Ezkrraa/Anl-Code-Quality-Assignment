@@ -16,14 +16,13 @@ def show_error(err: str):
 def clear_console():
     match (platform.system()):
         case "Windows":
-            os.system("cls")
+            # os.system("cls")
             return
         case _:
             os.system("clear")
 
 
 def to_main_menu(usr: db.User):
-    print(usr.isadmin)
     if usr.isadmin:
         admin_menu(usr)
     else:
@@ -37,7 +36,7 @@ def user_menu(usr: db.User):
 def admin_menu(usr: db.User):
     while True:
         selection: str = input(
-            f"MAIN MENU\nWelcome, {usr.username}!\nSelect an option to continue:\n\t0: Logout\n"
+            f"MAIN MENU\nWelcome, {usr.username}!\nSelect an option to continue:\n\t0: Logout\n\t"
         ).lower()
         match (selection):
             case "0":

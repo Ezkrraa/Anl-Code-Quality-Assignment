@@ -18,6 +18,27 @@ fake = Faker()
 database_connection: sqlite3.Connection = None
 
 
+class LogPoint:
+    id: uuid4
+    timestamp: datetime.datetime
+    severity: int
+    description: str
+
+    def __init__(self, severity, desc):
+        self.id = uuid4()
+        self.timestamp = datetime.datetime.now()
+        self.severity = severity
+        self.description = desc
+
+    def toTuple(self) -> tuple[bytes, str, int, str]:
+        return (
+            self.id.bytes,
+            self.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            self.severity,
+            self.description,
+        )
+
+
 class User:
     username: str
     password: str
@@ -110,7 +131,6 @@ def setup_database() -> None:
         print(e)
     finally:
         if database_connection:
-            print("creating tables")
             create_tables()
             return
 
@@ -119,7 +139,7 @@ def create_tables():
     statements = [
         """CREATE TABLE IF NOT EXISTS users (
         username TEXT PRIMARY KEY,
-        password BLOB,
+        password BLOB(60),
         failedlogins INT,
         isadmin BOOL
         )""",
@@ -136,7 +156,7 @@ def create_tables():
         registrationdate CHAR(10)
         )""",
         """CREATE TABLE IF NOT EXISTS logs (
-        id UUID PRIMARY KEY,
+        id BLOB(16) PRIMARY KEY,
         timestamp TEXT,
         severity INT,
         desc TEXT
@@ -148,9 +168,36 @@ def create_tables():
             cursor.execute(statement)
         database_connection.commit()
     except sqlite3.Error as e:
-        print(e)
+        write_log_short(f"Tried to seed database, but ran into error {e}")
     finally:
-        print("created tables successfully")
+        write_log_short(5, "Successfully created database, since none was found.")
+    database_connection.commit()
+
+
+def create_test_user(
+    uname="test", testpw="password123", failedattempts=0, isadmin=True
+):
+    "creates a default test user"
+
+    bcryptpass = bcrypt.hashpw(testpw.encode("utf-8"), bcrypt.gensalt())
+    cur = database_connection.cursor()
+    if cur.execute("SELECT 1 FROM users").fetchall() != None:
+        write_log_short(
+            6, "Was told to make a new user for testing, but users table wasn't empty"
+        )
+        return
+    try:
+        cur.execute(
+            "INSERT INTO users VALUES(?, ?, ?, ?)",
+            (uname, bcryptpass, failedattempts, isadmin),
+        )
+        database_connection.commit()
+    except sqlite3.Error as e:
+        write_log_short(
+            4, f"Tried to add a new user for testing, but ran into error {e}"
+        )
+    finally:
+        write_log_short(6, "Added a new user for testing, with default credentials")
 
 
 def seed_database():
@@ -160,6 +207,8 @@ def seed_database():
         "INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", seed_members
     )
     database_connection.commit()
+    write_log_short(6, "Successfully seeded members table")
+    create_test_user()
 
 
 def gen_memberid() -> str:
@@ -190,7 +239,6 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
     if output == None:
         return Exception("UserNotFound")
 
-    print(output)
     usr: User = User.fromtuple(data=output)
     if usr.failedattempts >= 3:
         return Exception("TooManyFailedAttempts")
@@ -203,3 +251,15 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
         return Exception("WrongPassword")
     else:
         return usr
+
+
+def write_log_short(severity: int, desc: str):
+    newlog = LogPoint(severity=severity, desc=desc)
+    write_log(newlog)
+
+
+def write_log(logpoint: LogPoint):
+    cursor = database_connection.cursor()
+    input(logpoint.toTuple())
+    cursor.execute("INSERT INTO logs VALUES(?, ?, ?, ?)", logpoint.toTuple())
+    database_connection.commit()
