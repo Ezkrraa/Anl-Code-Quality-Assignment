@@ -83,9 +83,13 @@ class Member:
     registrationdate: str
 
     def __init__(
-        self, fname, lname, age, gender, weight, addr, email, phone, regdate
+        self, fname, lname, age, gender, weight, addr, email, phone, regdate, id='0'
     ) -> None:
-        self.id = gen_memberid()
+        # input(id + ' ' + fname + ' ' + lname + ' ' + str(age) + ' ' + gender + ' ' + str(weight) + ' ' + addr + ' ' + email + ' ' + phone + ' ' + regdate)
+        if id == '0':
+            self.id = gen_memberid()
+        else:
+            self.id = id
         self.firstname = fname
         self.lastname = lname
         self.age = age
@@ -97,10 +101,10 @@ class Member:
         self.registrationdate = regdate
 
     @classmethod
-    def fromtuple(self, data: tuple[str, str, str, int, str, str, str, str]) -> None:
-        self.__init__(
-            self, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]
-        )
+    # format: id(str), fname(str), lname(str), age(int), gender(char), weight(int), address(str), email(str), phone(str), regdate(str)
+    def fromtuple(cls, data: tuple[str, str, str, int, str, int, str, str, str, str]):
+        return cls(data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], id=data[0])
+        
 
     @classmethod
     def genrandom(self) -> User:
@@ -110,7 +114,7 @@ class Member:
         self.age = rand.randint(20, 80)
         self.gender = rand.choice(["F", "F", "M", "M", "O"])
         self.weight = rand.randint(50, 110)
-        self.address = fake.address()
+        self.address = fake.address().replace("\n", " ")
         self.email = fake.email()
         self.phonenumber = rand.randint(10000000, 99999999)
         self.registrationdate = str(datetime.datetime.now().date().today())
@@ -129,6 +133,9 @@ class Member:
             self.phonenumber,
             self.registrationdate,
         )
+    
+    def __str__(self) -> str:
+        return f"ID: {self.id}\nName: {self.firstname} {self.lastname}\nAge: {self.age}\nGender: {self.gender}\nWeight: {self.weight}\nAddress: {self.address}\nEmail: {self.email}\nPhone number: {self.phonenumber}\nRegistration Date: {self.registrationdate}"
 
 
 def setup_database() -> None:
@@ -241,6 +248,12 @@ def gen_memberid() -> str:
             return new_id
 
 
+def get_all_members() -> list[Member]:
+    cur = database_connection.cursor()
+    members = cur.execute("SELECT * FROM members").fetchall()
+    return [Member.fromtuple(row) for row in members]
+
+
 def get_all_users(include_admins=False) -> list[User]:
     cur = database_connection.cursor()
     if include_admins:
@@ -249,7 +262,7 @@ def get_all_users(include_admins=False) -> list[User]:
         users = cur.execute(
             "SELECT * FROM users WHERE isadmin = 0 ORDER BY username"
         ).fetchall()
-    return [User.fromtuple(data) for data in users]
+    return [User.fromtuple(row) for row in users]
 
 
 def attempt_login(uname: str, attemptPassword: str) -> Exception | User:

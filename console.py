@@ -44,7 +44,46 @@ def to_main_menu(usr: db.User):
 
 
 def user_menu(usr: db.User):
-    NotImplementedError("Reminder: make a user menu :>")
+    while True:
+        clear_console()
+        show_logo()
+        user_options = ["Show members", "Logout"]
+        selection, index = pick(
+            user_options,
+            title=f"{logo}\nConsultant - MAIN MENU\nWelcome, {usr.username}!",
+            indicator=">",
+        )
+        match index:
+            case 0:
+                show_members()
+            case 1:
+                show_error("Logging out now.")
+                break
+            case _:
+                show_error("Invalid option.")
+
+
+def show_members() -> None:
+    while True:
+        clear_console()
+        options = ["Return"]
+        members = db.get_all_members()
+        options.extend([f"[{(1 + i):02}] {members[i].firstname} {members[i].lastname}" for i in range(len(members))])
+        selection, index = pick(
+            options, indicator='>', title=f"{logo}\nMember-menu"
+        )
+        match index:
+            case 0:
+                return
+            case _:
+                show_member(members[index - 1 ])
+
+
+def show_member(member: db.Member):
+    clear_console()
+    show_logo()
+    print(str(member))
+    input("[Press enter to continue]")
 
 
 def show_users(include_admins=False) -> None:
@@ -73,7 +112,7 @@ def admin_menu(usr: db.User):
     while True:
         clear_console()
         show_logo()
-        admin_options = ["Show users", "Logout"]
+        admin_options = ["Show members", "Show consultants", "Logout"]
         selection, index = pick(
             admin_options,
             title=f"{logo}\nADMIN - MAIN MENU\nWelcome, {usr.username}!",
@@ -81,19 +120,19 @@ def admin_menu(usr: db.User):
         )
         match index:
             case 0:
-                show_users(False)
+                show_members()
             case 1:
+                show_users(True)
+            case 2:
                 show_error("Logging out now.")
-
                 break
             case _:
                 show_error("Invalid option.")
-                continue
 
 
 def super_admin_menu():
     while True:
-        su_admin_options = ["Show admins and users", "Logout"]
+        su_admin_options = ["Show members", "Show admins and consultants", "Logout"]
         selection, index = pick(
             su_admin_options,
             title=f"{logo}\nSUPER ADMIN - MAIN MENU\nWelcome, super admin!",
@@ -103,6 +142,8 @@ def super_admin_menu():
             case 0:
                 show_users(True)
             case 1:
+                show_members()
+            case 2:
                 show_error("Logging out now.")
                 break
             case _:
