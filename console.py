@@ -31,7 +31,8 @@ def show_error(err: str):
 def clear_console():
     match (platform.system()):
         case "Windows":
-            os.system("cls")
+            # os.system("cls")
+            return
         case _:
             os.system("clear")
 
@@ -70,7 +71,7 @@ def show_members() -> None:
         members = db.get_all_members()
         options.extend([f"[{(1 + i):02}] {members[i].firstname} {members[i].lastname}" for i in range(len(members))])
         selection, index = pick(
-            options, indicator='>', title=f"{logo}\nMember-menu"
+            options, indicator='>', title=f"{logo}\nMember menu"
         )
         match index:
             case 0:
@@ -80,10 +81,54 @@ def show_members() -> None:
 
 
 def show_member(member: db.Member):
-    clear_console()
-    show_logo()
-    print(str(member))
-    input("[Press enter to continue]")
+    while True:
+        options = ["Return to user menu", "Edit information"]
+        result, index = pick(options, indicator='>', title=f"{logo}Member Info:\n{member}")
+        match index:
+            case 0:
+                break
+            case 1:
+                edit_member(member)
+
+
+def edit_member(member: db.Member):
+    while True:
+        options = ["Return without saving", "Return and save", f"First name: {member.firstname}", f"Last name: {member.lastname}", f"Age: {member.age}", f"Gender: {member.gender}", f"Weight: {member.weight}", f"Address: {member.address}", f"Email: {member.email}", f"Phone number: {member.phonenumber}"]
+        result, index = pick(options, indicator='>', title=f"{logo}Edit member info:")
+        match index:
+            case 0:
+                break
+            case 1:
+                db.edit_member(member)
+            case _:
+                member = change_member(index - 2, member, input("Enter new value:"))
+
+
+def change_member(index: int, member: db.Member, new_value: str) -> db.Member:
+    match index:
+        case 0:
+            member.firstname = new_value
+        case 1:
+            member.lastname = new_value
+        case 2:
+            try:
+                member.age = int(new_value)
+            except ValueError:
+                return member
+        case 3:
+            member.gender = new_value
+        case 4:
+            try:
+                member.weight = int(new_value)
+            except ValueError:
+                return member
+        case 5:
+            member.address = new_value
+        case 6:
+            member.email = new_value
+        case 7:
+            member.phonenumber = new_value
+    return member
 
 
 def show_users(include_admins=False) -> None:
@@ -91,9 +136,9 @@ def show_users(include_admins=False) -> None:
         users: list[db.User] = db.get_all_users(include_admins)
         options = ["Return to main menu"]
         # input(users)
-        options.extend([f"[{i:03}] {users[i].username}" for i in range(len(users))])
+        options.extend([f"[{i:02}] {users[i].username}" for i in range(len(users))])
         selection, index = pick(
-            options, indicator=">", title=f"{logo}\nBACK TO MAIN MENU"
+            options, indicator=">", title=f"{logo}\nUser menu"
         )
         match index:
             case 0:
@@ -103,9 +148,14 @@ def show_users(include_admins=False) -> None:
 
 
 def show_user(usr: db.User) -> None:
-    clear_console()
-    print(str(usr))
-    input("[Press enter to continue]")
+    while True:
+        options = ["Return", "Edit information"]
+        result, index = pick(options, title=f"{logo}User Info:\n{usr}", indicator='>')
+        match index:
+            case 0:
+                break
+            case 1:
+                edit_user(usr)
 
 
 def admin_menu(usr: db.User):
@@ -140,9 +190,9 @@ def super_admin_menu():
         )
         match index:
             case 0:
-                show_users(True)
-            case 1:
                 show_members()
+            case 1:
+                show_users(True)
             case 2:
                 show_error("Logging out now.")
                 break

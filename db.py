@@ -248,6 +248,13 @@ def gen_memberid() -> str:
             return new_id
 
 
+def edit_member(member: Member):
+    cur = database_connection.cursor()
+    database_connection.execute("UPDATE users SET VALUES(?,?,?,?,?,?,?,?,?,?) WHERE id=?", (member.toTuple(),member.id))
+    database_connection.commit()
+
+
+
 def get_all_members() -> list[Member]:
     cur = database_connection.cursor()
     members = cur.execute("SELECT * FROM members").fetchall()

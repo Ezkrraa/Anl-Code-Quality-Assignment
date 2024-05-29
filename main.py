@@ -28,6 +28,8 @@ def exit_handler():
     """Runs on close, closes the database connection"""
     if db.database_connection:
         db.database_connection.close()
+    console.clear_console()
+    print("Exited successfully.")
 
 
 if __name__ == "__main__":
