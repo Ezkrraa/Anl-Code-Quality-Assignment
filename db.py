@@ -1,6 +1,7 @@
 # uuid v4, since it's unique and random
-from uuid import uuid4
+from uuid import uuid4, UUID
 
+from typing import cast
 # to have strict type checking
 from pydantic import BaseModel
 
@@ -15,11 +16,11 @@ from random import Random
 
 rand = Random()
 fake = Faker()
-database_connection: sqlite3.Connection = None
+database_connection: sqlite3.Connection
 
 
 class LogPoint:
-    id: uuid4
+    id: UUID
     timestamp: datetime.datetime
     severity: int
     description: str
@@ -56,12 +57,12 @@ class User:
         return cls(data[0], data[1], data[2], bool(data[3]))
 
     @classmethod
-    def genRandom(self):
-        self.username = fake.catch_phrase()
-        self.password = bcrypt.hashpw("password123".encode("utf-8"), bcrypt.gensalt())
-        self.failedattempts = 0
-        self.isadmin = False
-        return self
+    def genRandom(cls):
+        username = fake.catch_phrase()
+        password = str(bcrypt.hashpw("password123".encode("utf-8"), bcrypt.gensalt()))
+        failedattempts = 0
+        isadmin = False
+        return cls(username, password, failedattempts, isadmin)
 
     def toTuple(self) -> tuple[str, str, int, bool]:
         return (self.username, self.password, self.failedattempts, self.isadmin)
@@ -107,20 +108,20 @@ class Member:
         
 
     @classmethod
-    def genrandom(self) -> User:
-        self.id = gen_memberid()
-        self.firstname = fake.first_name()
-        self.lastname = fake.last_name()
-        self.age = rand.randint(20, 80)
-        self.gender = rand.choice(["F", "F", "M", "M", "O"])
-        self.weight = rand.randint(50, 110)
-        self.address = fake.address().replace("\n", " ")
-        self.email = fake.email()
-        self.phonenumber = rand.randint(10000000, 99999999)
-        self.registrationdate = str(datetime.datetime.now().date().today())
-        return self
+    def genrandom(cls):
+        id = gen_memberid()
+        firstname = fake.first_name()
+        lastname = fake.last_name()
+        age = rand.randint(20, 80)
+        gender = rand.choice(["F", "F", "M", "M", "O"])
+        weight = rand.randint(50, 110)
+        address = fake.address().replace("\n", " ")
+        email = fake.email()
+        phonenumber = str(rand.randint(10000000, 99999999))
+        registrationdate = str(datetime.datetime.now().date().today())
+        return cls(id, firstname, lastname, age, gender, weight, address, email, phonenumber, registrationdate)
 
-    def toTuple(self) -> tuple[str, str, str, int, str, str, str, str]:
+    def toTuple(self) -> tuple[str, str, str, int, str, int, str, str, str, str]:
         return (
             self.id,
             self.firstname,
@@ -185,7 +186,7 @@ def create_tables():
             cursor.execute(statement)
         database_connection.commit()
     except sqlite3.Error as e:
-        write_log_short(f"Tried to seed database, but ran into error {e}")
+        write_log_short(5, f"Tried to seed database, but ran into error {e}")
     finally:
         write_log_short(6, "Successfully seeded database (this happens at any startup)")
     database_connection.commit()
@@ -223,7 +224,7 @@ def seed_database():
     cursor.executemany(
         "INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", seed_members
     )
-    seed_users = [User.toTuple(User.genRandom()) for _ in range(20)]
+    seed_users = [User.genRandom().toTuple() for _ in range(20)]
     cursor.executemany("INSERT INTO users VALUES(?, ?, ?, ?)", seed_users)
     database_connection.commit()
     write_log_short(6, "Successfully seeded members table")
@@ -248,11 +249,35 @@ def gen_memberid() -> str:
             return new_id
 
 
+def unlock_account(adminname: User, usr: User):
+    cur = database_connection.cursor()
+    result = cur.execute(
+        "SELECT * FROM users WHERE username = ?", (usr.username,)
+    ).fetchone()
+    if result == None:
+        return
+    admin: User = User.fromtuple(result)
+    if not admin.isadmin:
+        write_log_short(
+            3,
+            f"user {admin.username} tried to unlock {usr}'s account, but is not an admin.",
+        )  # should not be possible to do, since I shouldn't be calling this function with a non-admin at all
+        return
+    cur.execute("UPDATE users SET failedlogins = 0 WHERE username=?", (usr.username,))
+    database_connection.commit()
+    write_log_short(6, f"{admin.username} unlocked {usr.username}'s account.")
+
+
 def edit_member(member: Member):
     cur = database_connection.cursor()
-    database_connection.execute("UPDATE users SET VALUES(?,?,?,?,?,?,?,?,?,?) WHERE id=?", (member.toTuple(),member.id))
+    cur.execute("REPLACE INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.toTuple())
     database_connection.commit()
 
+
+def edit_user(usr: User):
+    cur = database_connection.cursor()
+    cur.execute("REPLACE INTO users VALUES(?,?,?,?)", usr.toTuple())
+    database_connection.commit()
 
 
 def get_all_members() -> list[Member]:
@@ -292,7 +317,7 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
             6, f"Attempted to log into account {uname}, but already failed thrice."
         )
         return Exception("TooManyFailedAttempts")
-    elif not bcrypt.checkpw(attemptPassword.encode("utf-8"), usr.password):
+    elif not bcrypt.checkpw(attemptPassword.encode("utf-8"), usr.password): # type: ignore
         cursor.execute(
             "UPDATE Users SET failedlogins = (failedlogins + 1) WHERE Username=?",
             (uname,),

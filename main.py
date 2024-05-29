@@ -2,26 +2,12 @@
 import db
 import console
 from uuid import uuid4
-import bcrypt
-
+import sys
 # for closing the db connection on exit
 import atexit
 
 
-def unlock_account(adminname, accountname):
-    cur = db.database_connection.cursor()
-    admin: db.User = cur.execute(
-        "SELECT * FROM users WHERE username = ?", (adminname,)
-    ).fetchone()
-    if not admin.isadmin:
-        db.write_log_short(
-            3,
-            f"user {admin.username} tried to unlock {accountname}'s account, but is not an admin.",
-        )  # should not be possible to do, since I shouldn't be calling this function with a non-admin at all
-        return
-    cur.execute("UPDATE users SET failedlogins = 0 WHERE username=?", (accountname,))
-    db.database_connection.commit()
-    db.write_log_short(6, f"{admin.username} unlocked {accountname}'s account.")
+
 
 
 def exit_handler():
@@ -33,6 +19,8 @@ def exit_handler():
 
 
 if __name__ == "__main__":
+    if(sys.argv[1] == "no-clear"):
+        console.noclear = True
     atexit.register(exit_handler)
     db.setup_database()
     if (
