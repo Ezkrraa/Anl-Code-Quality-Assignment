@@ -34,7 +34,7 @@ def show_error(err: str):
 
 
 def clear_console():
-    if (main.noclear):
+    if (noclear):
         return
     match (platform.system()):
         case "Windows":
