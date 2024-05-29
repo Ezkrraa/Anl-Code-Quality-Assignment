@@ -2,6 +2,7 @@
 from uuid import uuid4, UUID
 
 from typing import cast
+
 # to have strict type checking
 from pydantic import BaseModel
 
@@ -84,10 +85,10 @@ class Member:
     registrationdate: str
 
     def __init__(
-        self, fname, lname, age, gender, weight, addr, email, phone, regdate, id='0'
+        self, fname, lname, age, gender, weight, addr, email, phone, regdate, id="0"
     ) -> None:
         # input(id + ' ' + fname + ' ' + lname + ' ' + str(age) + ' ' + gender + ' ' + str(weight) + ' ' + addr + ' ' + email + ' ' + phone + ' ' + regdate)
-        if id == '0':
+        if id == "0":
             self.id = gen_memberid()
         else:
             self.id = id
@@ -104,8 +105,18 @@ class Member:
     @classmethod
     # format: id(str), fname(str), lname(str), age(int), gender(char), weight(int), address(str), email(str), phone(str), regdate(str)
     def fromtuple(cls, data: tuple[str, str, str, int, str, int, str, str, str, str]):
-        return cls(data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], id=data[0])
-        
+        return cls(
+            data[1],
+            data[2],
+            data[3],
+            data[4],
+            data[5],
+            data[6],
+            data[7],
+            data[8],
+            data[9],
+            id=data[0],
+        )
 
     @classmethod
     def genrandom(cls):
@@ -119,7 +130,18 @@ class Member:
         email = fake.email()
         phonenumber = str(rand.randint(10000000, 99999999))
         registrationdate = str(datetime.datetime.now().date().today())
-        return cls(id, firstname, lastname, age, gender, weight, address, email, phonenumber, registrationdate)
+        return cls(
+            id,
+            firstname,
+            lastname,
+            age,
+            gender,
+            weight,
+            address,
+            email,
+            phonenumber,
+            registrationdate,
+        )
 
     def toTuple(self) -> tuple[str, str, str, int, str, int, str, str, str, str]:
         return (
@@ -134,7 +156,7 @@ class Member:
             self.phonenumber,
             self.registrationdate,
         )
-    
+
     def __str__(self) -> str:
         return f"ID: {self.id}\nName: {self.firstname} {self.lastname}\nAge: {self.age}\nGender: {self.gender}\nWeight: {self.weight}\nAddress: {self.address}\nEmail: {self.email}\nPhone number: {self.phonenumber}\nRegistration Date: {self.registrationdate}"
 
@@ -317,7 +339,7 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
             6, f"Attempted to log into account {uname}, but already failed thrice."
         )
         return Exception("TooManyFailedAttempts")
-    elif not bcrypt.checkpw(attemptPassword.encode("utf-8"), usr.password): # type: ignore
+    elif not bcrypt.checkpw(attemptPassword.encode("utf-8"), usr.password):  # type: ignore
         cursor.execute(
             "UPDATE Users SET failedlogins = (failedlogins + 1) WHERE Username=?",
             (uname,),
