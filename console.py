@@ -6,7 +6,7 @@ from typing import cast
 # for clearing the console
 import platform, os
 from pick import pick
-import db, main
+import db
 
 noclear: bool = False
 
@@ -38,7 +38,7 @@ def clear_console():
         return
     match (platform.system()):
         case "Windows":
-            # os.system("cls")
+            os.system("cls")
             return
         case _:
             os.system("clear")

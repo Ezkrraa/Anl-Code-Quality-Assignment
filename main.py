@@ -19,7 +19,7 @@ def exit_handler():
 
 
 if __name__ == "__main__":
-    if(sys.argv[1] == "no-clear"):
+    if(sys.argv.__contains__("--no-clear")):
         console.noclear = True
     atexit.register(exit_handler)
     db.setup_database()
