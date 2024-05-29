@@ -77,3 +77,24 @@ if __name__ == "__main__":
 #    6: info     informational  normal operational messages that require no action
 #    7: debug    debug          information that is useful for debugging the application
 # Description
+
+
+
+## TODO:
+# FIXES:
+#   - fix changing username
+# NEW FEATURES:
+## Consultant (user):
+#   - update own password
+#   - make/edit members
+#   - search members
+#   - 
+#   - 
+#   - 
+
+## SU ADMIN:
+#   - make/edit users/admins
+#   - reset passwords of users/admins (temporary password)
+#   - delete user/admin account
+#   - super admin/admins should be able to make new users(consultants)
+#   - 
