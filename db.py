@@ -135,6 +135,9 @@ class Member:
             self.registrationdate,
         )
     
+    def fullname(self):
+        return f"{self.firstname} {self.lastname}"
+    
     def __str__(self) -> str:
         return f"ID: {self.id}\nName: {self.firstname} {self.lastname}\nAge: {self.age}\nGender: {self.gender}\nWeight: {self.weight}\nAddress: {self.address}\nEmail: {self.email}\nPhone number: {self.phonenumber}\nRegistration Date: {self.registrationdate}"
 
@@ -268,13 +271,14 @@ def unlock_account(adminname: User, usr: User):
     write_log_short(6, f"{admin.username} unlocked {usr.username}'s account.")
 
 
-def edit_member(member: Member):
+def edit_member(admin: User, member: Member):
     cur = database_connection.cursor()
     cur.execute("REPLACE INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.toTuple())
     database_connection.commit()
+    write_log_short(6, f"{admin.username} changed information of member {member.fullname()}")
 
 
-def edit_user(usr: User):
+def edit_user(admin: User, usr: User):
     cur = database_connection.cursor()
     cur.execute("REPLACE INTO users VALUES(?,?,?,?)", usr.toTuple())
     database_connection.commit()

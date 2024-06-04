@@ -34,7 +34,7 @@ def show_error(err: str):
 
 
 def clear_console():
-    if (noclear):
+    if noclear:
         return
     match (platform.system()):
         case "Windows":
@@ -68,7 +68,7 @@ def user_menu(usr: db.User):
                 query = input("Search for a member:")
                 # TODO: add search function
             case 1:
-                show_members()
+                show_members(usr)
             case 2:
                 show_error("Logging out now.")
                 break
@@ -76,50 +76,68 @@ def user_menu(usr: db.User):
                 show_error("Invalid option.")
 
 
-
-
-def show_members() -> None:
+def show_members(user: db.User) -> None:
     while True:
         clear_console()
         options = ["Return"]
         members = db.get_all_members()
-        options.extend([f"[{(1 + i):02}] {members[i].firstname} {members[i].lastname}" for i in range(len(members))])
-        selection, index = pick(
-            options, indicator='>', title=f"{logo}\nMember menu"
+        options.extend(
+            [
+                f"[{(1 + i):02}] {members[i].firstname} {members[i].lastname}"
+                for i in range(len(members))
+            ]
+        )
+        selection, index = pick(options, indicator=">", title=f"{logo}\nMember menu")
+        match index:
+            case 0:
+                return
+            case _:
+                show_member(user, members[cast(int, index) - 1])
+
+
+def show_member(user: db.User, member: db.Member) -> None:
+    while True:
+        options = ["Return to user menu", "Edit information"]
+        result, index = pick(
+            options=options, indicator=">", title=f"{logo}Member Info:\n{member}"
         )
         match index:
             case 0:
                 return
-            case _:
-                show_member(members[cast(int, index) - 1])
-
-
-def show_member(member: db.Member) -> None:
-    while True:
-        options = ["Return to user menu", "Edit information"]
-        result, index = pick(options=options, indicator='>', title=f"{logo}Member Info:\n{member}")
-        match index:
-            case 0:
-                return
             case 1:
-                edit_member(member)
+                edit_member(user, member)
 
 
-def edit_member(member: db.Member):
+def edit_member(user: db.User, member: db.Member):
     while True:
-        options = ["Return without saving", "Return and save", f"First name: {member.firstname}", f"Last name: {member.lastname}", f"Age: {member.age}", f"Gender: {member.gender}", f"Weight: {member.weight}", f"Address: {member.address}", f"Email: {member.email}", f"Phone number: {member.phonenumber}"]
-        result, index = pick(options=options, indicator='>', title=f"{logo}Edit member info:")
+        options = [
+            "Return without saving",
+            "Return and save",
+            f"First name: {member.firstname}",
+            f"Last name: {member.lastname}",
+            f"Age: {member.age}",
+            f"Gender: {member.gender}",
+            f"Weight: {member.weight}",
+            f"Address: {member.address}",
+            f"Email: {member.email}",
+            f"Phone number: {member.phonenumber}",
+        ]
+        result, index = pick(
+            options=options, indicator=">", title=f"{logo}Edit member info:"
+        )
         match index:
             case 0:
                 break
             case 1:
-                db.edit_member(member)
+                db.edit_member(user, member)
                 break
             case _:
-                member = change_member(cast(int, index) - 2, member, input("Enter new value:"))
+                member = change_member(cast(int, index) - 2, member)
 
 
-def change_member(index: int, member: db.Member, new_value: str) -> db.Member:
+def change_member(index: int, member: db.Member) -> db.Member:
+    clear_console()
+    new_value = input("Enter new value: ")
     match index:
         case 0:
             member.firstname = new_value
@@ -127,8 +145,13 @@ def change_member(index: int, member: db.Member, new_value: str) -> db.Member:
             member.lastname = new_value
         case 2:
             try:
-                member.age = int(new_value)
+                num = int(new_value)
+                if 18 < num < 100:
+                    member.age = num
+                else:
+                    show_error("Age was not within a valid range.")
             except ValueError:
+                show_error("Age was not a valid number.")
                 return member
         case 3:
             member.gender = new_value
@@ -152,9 +175,7 @@ def show_users(currentUser: db.User) -> None:
         options = ["Return to main menu"]
         # input(users)
         options.extend([f"[{i:02}] {users[i].username}" for i in range(len(users))])
-        selection, index = pick(
-            options, indicator=">", title=f"{logo}\nUser menu"
-        )
+        selection, index = pick(options, indicator=">", title=f"{logo}\nUser menu")
         match index:
             case 0:
                 return
@@ -170,7 +191,9 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
         options = ["Return", "Edit information"]
         if resettable:
             options.append("Unlock user")
-        result, index = pick(options=options, title=f"{logo}User Info:\n{usr}", indicator='>')
+        result, index = pick(
+            options=options, title=f"{logo}User Info:\n{usr}", indicator=">"
+        )
         match index:
             case 0:
                 break
@@ -185,18 +208,26 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
 
 def edit_user(currentUser: db.User, usr: db.User) -> None:
     while True:
-        options = ["Return without saving", "Return and save", f"Username: {usr.username}", f"Is {"an" if usr.isadmin else "not an"} admin"]
-        result, index = pick(options=options, indicator='>', title=f"{logo}Edit member info:")
+        options = [
+            "Return without saving",
+            "Return and save",
+            f"Username: {usr.username}",
+            f"Is {"an" if usr.isadmin else "not an"} admin",
+        ]
+        result, index = pick(
+            options=options, indicator=">", title=f"{logo}Edit member info:"
+        )
         match index:
             case 0:
                 break
             case 1:
-                db.edit_user(usr)
+                db.edit_user(currentUser, usr)
                 break
             case 2:
                 usr.username = input("Enter new username:")
             case 3:
                 usr.isadmin = not usr.isadmin
+
 
 def change_user(option: int, usr: db.User, value: str) -> db.User:
     value = value.lower()
@@ -204,7 +235,6 @@ def change_user(option: int, usr: db.User, value: str) -> db.User:
         case 0:
             usr.username = value
     return usr
-
 
 
 def admin_menu(admin: db.User):
@@ -219,7 +249,7 @@ def admin_menu(admin: db.User):
         )
         match index:
             case 0:
-                show_members()
+                show_members(admin)
             case 1:
                 show_users(admin)
             case 2:
@@ -240,7 +270,7 @@ def super_admin_menu():
         )
         match index:
             case 0:
-                show_members()
+                show_members(super_admin)
             case 1:
                 show_users(super_admin)
             case 2:
