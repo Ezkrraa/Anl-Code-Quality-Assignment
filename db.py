@@ -42,31 +42,41 @@ class LogPoint:
 
 
 class User:
+    id: UUID
     username: str
-    password: str
+    password: str  # TODO: refactor to bytes
     failedattempts: int
     isadmin: bool
 
-    def __init__(self, uname, pw, fails=0, isadmin=False) -> None:
+    def __init__(
+        self, uname, pw, fails=0, isadmin=False, uid: bytes = uuid4().bytes
+    ) -> None:
+        self.id = UUID(bytes=uid)
         self.username = uname
         self.password = pw
         self.failedattempts = fails
         self.isadmin = isadmin
 
     @classmethod
-    def fromtuple(cls, data: tuple[str, str, int, bool]):
-        return cls(data[0], data[1], data[2], bool(data[3]))
+    def fromtuple(cls, data: tuple[bytes, str, str, int, bool]):
+        return cls(data[1], data[2], data[3], bool(data[4]), data[0])
 
     @classmethod
     def genRandom(cls):
-        username = fake.catch_phrase()
+        username = fake.first_name()
         password = str(bcrypt.hashpw("password123".encode("utf-8"), bcrypt.gensalt()))
         failedattempts = 0
         isadmin = False
-        return cls(username, password, failedattempts, isadmin)
+        return cls(username, password, failedattempts, isadmin, uuid4().bytes)
 
-    def toTuple(self) -> tuple[str, str, int, bool]:
-        return (self.username, self.password, self.failedattempts, self.isadmin)
+    def toTuple(self) -> tuple[bytes, str, str, int, bool]:
+        return (
+            self.id.bytes,
+            self.username,
+            self.password,
+            self.failedattempts,
+            self.isadmin,
+        )
 
     def __str__(self) -> str:
         return f"Name: {self.username}\nIs admin: {self.isadmin}\nFailed login attempts: {self.failedattempts}"
@@ -178,7 +188,8 @@ def setup_database() -> None:
 def create_tables():
     statements = [
         """CREATE TABLE IF NOT EXISTS users (
-        username TEXT PRIMARY KEY,
+        id BLOB(16) PRIMARY KEY,
+        username TEXT,
         password BLOB(60),
         failedlogins INT,
         isadmin BOOL
@@ -206,12 +217,10 @@ def create_tables():
         cursor = database_connection.cursor()
         for statement in statements:
             cursor.execute(statement)
+        cursor.close()
         database_connection.commit()
     except sqlite3.Error as e:
         write_log_short(5, f"Tried to seed database, but ran into error {e}")
-    finally:
-        write_log_short(6, "Successfully seeded database (this happens at any startup)")
-    database_connection.commit()
 
 
 def create_test_admin():
@@ -226,14 +235,15 @@ def create_test_admin():
         return
     try:
         cur.execute(
-            "INSERT INTO users VALUES(?, ?, ?, ?)",
-            ("admin", bcryptpass, 0, True),
+            "INSERT INTO users VALUES(?, ?, ?, ?, ?)",
+            (uuid4().bytes, "admin", bcryptpass, 0, True),
         )
         cur.execute(
-            "INSERT INTO users VALUES(?, ?, ?, ?)",
-            ("user", bcryptpass, 0, False),
+            "INSERT INTO users VALUES(?, ?, ?, ?, ?)",
+            (uuid4().bytes, "user", bcryptpass, 0, False),
         )
         database_connection.commit()
+        cur.close()
     except sqlite3.Error as e:
         write_log_short(
             4, f"Tried to add a new user for testing, but ran into error {e}"
@@ -249,7 +259,8 @@ def seed_database():
         "INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", seed_members
     )
     seed_users = [User.genRandom().toTuple() for _ in range(20)]
-    cursor.executemany("INSERT INTO users VALUES(?, ?, ?, ?)", seed_users)
+    cursor.executemany("INSERT INTO users VALUES(?, ?, ?, ?, ?)", seed_users)
+    cursor.close()
     database_connection.commit()
     write_log_short(6, "Successfully seeded members table")
     create_test_admin()
@@ -288,6 +299,7 @@ def unlock_account(adminname: User, usr: User):
         )  # should not be possible to do, since I shouldn't be calling this function with a non-admin at all
         return
     cur.execute("UPDATE users SET failedlogins = 0 WHERE username=?", (usr.username,))
+    cur.close()
     database_connection.commit()
     write_log_short(6, f"{admin.username} unlocked {usr.username}'s account.")
 
@@ -295,13 +307,50 @@ def unlock_account(adminname: User, usr: User):
 def edit_member(member: Member):
     cur = database_connection.cursor()
     cur.execute("REPLACE INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.toTuple())
+    cur.close()
     database_connection.commit()
+
+
+def delete_member(user: User, member: Member) -> bool:
+    try:
+        cur = database_connection.cursor()
+        cur.execute("DELETE FROM members WHERE id=?", (member.id,))
+        database_connection.commit()
+        cur.close()
+        write_log_short(
+            6,
+            f"{user.username} deleted the account of {member.firstname} {member.lastname}.",
+        )
+        return True
+    except Exception as e:
+        write_log_short(
+            4,
+            f"Failed to delete member {member.firstname} {member.lastname} due to error {e}",
+        )
+        return False
 
 
 def edit_user(usr: User):
     cur = database_connection.cursor()
     cur.execute("REPLACE INTO users VALUES(?,?,?,?)", usr.toTuple())
+    cur.close()
     database_connection.commit()
+
+
+def delete_user(admin: User, user: User) -> bool:
+    try:
+        cur = database_connection.cursor()
+        cur.execute("DELETE FROM users WHERE id=?", (user.id.bytes,))
+        database_connection.commit()
+        cur.close()
+        write_log_short(
+            6,
+            f"{admin.username} deleted the account of {user.username}.",
+        )
+        return True
+    except Exception as e:
+        write_log_short(4, f"Failed to delete user {user.username} due to error {e}")
+        return False
 
 
 def get_all_members() -> list[Member]:
@@ -327,10 +376,9 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
     uname = uname.lower()
     if uname == "super_admin" and attemptPassword == "Admin_123?":
         return Exception("SuperAdmin")
+
     cursor = database_connection.cursor()
-    output = cursor.execute(
-        "SELECT * FROM Users WHERE Username = ?", (uname,)
-    ).fetchone()
+    output = cursor.execute("SELECT * FROM Users WHERE username=?", (uname,)).fetchone()
 
     if output == None:
         return Exception("UserNotFound")
@@ -346,6 +394,7 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
             "UPDATE Users SET failedlogins = (failedlogins + 1) WHERE Username=?",
             (uname,),
         )
+        cursor.close()
         database_connection.commit()
         write_log_short(6, f"Failed attempt to log into account {uname}")
         return Exception("WrongPassword")
@@ -362,4 +411,5 @@ def write_log(logpoint: LogPoint):
     cursor = database_connection.cursor()
     # input(logpoint.toTuple())
     cursor.execute("INSERT INTO logs VALUES(?, ?, ?, ?)", logpoint.toTuple())
+    cursor.close()
     database_connection.commit()

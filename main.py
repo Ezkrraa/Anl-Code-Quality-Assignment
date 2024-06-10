@@ -10,7 +10,7 @@ if __name__ == "__main__":
         console.noclear = True
     db.setup_database()
     if (
-        db.database_connection.cursor().execute("SELECT 1 FROM users").fetchone()
+        db.database_connection.cursor().execute("SELECT * FROM users").fetchone()
         == None
     ):
         db.seed_database()
