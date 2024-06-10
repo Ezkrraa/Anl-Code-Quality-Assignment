@@ -123,7 +123,7 @@ def show_members() -> None:
 
 def show_member(member: db.Member) -> None:
     while True:
-        options = ["Return to user menu", "Edit information",]
+        options = ["Return to user menu", "Edit information"]
         result, index = pick(
             options=options, indicator=">", title=f"{logo}Member Info:\n{member}"
         )
