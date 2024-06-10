@@ -131,16 +131,16 @@ class Member:
         phonenumber = str(rand.randint(10000000, 99999999))
         registrationdate = str(datetime.datetime.now().date().today())
         return cls(
-            id,
-            firstname,
-            lastname,
-            age,
-            gender,
-            weight,
-            address,
-            email,
-            phonenumber,
-            registrationdate,
+            fname=firstname,
+            lname=lastname,
+            age=age,
+            gender=gender,
+            weight=weight,
+            addr=address,
+            email=email,
+            phone=phonenumber,
+            regdate=registrationdate,
+            id=id,
         )
 
     def toTuple(self) -> tuple[str, str, str, int, str, int, str, str, str, str]:
