@@ -214,11 +214,9 @@ def create_tables():
     database_connection.commit()
 
 
-def create_test_admin(
-    uname="test", testpw="password123", failedattempts=0, isadmin=True
-):
+def create_test_admin():
     "creates a default test user"
-
+    testpw = "Admin_123?"
     bcryptpass = bcrypt.hashpw(testpw.encode("utf-8"), bcrypt.gensalt())
     cur = database_connection.cursor()
     if cur.execute("SELECT 1 FROM users WHERE isadmin = 1").fetchone() != None:
@@ -229,7 +227,11 @@ def create_test_admin(
     try:
         cur.execute(
             "INSERT INTO users VALUES(?, ?, ?, ?)",
-            (uname, bcryptpass, failedattempts, isadmin),
+            ("admin", bcryptpass, 0, True),
+        )
+        cur.execute(
+            "INSERT INTO users VALUES(?, ?, ?, ?)",
+            ("user", bcryptpass, 0, False),
         )
         database_connection.commit()
     except sqlite3.Error as e:
