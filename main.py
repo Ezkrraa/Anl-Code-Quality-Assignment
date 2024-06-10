@@ -3,11 +3,9 @@ import db
 import console
 from uuid import uuid4
 import sys
+
 # for closing the db connection on exit
 import atexit
-
-
-
 
 
 def exit_handler():
@@ -19,7 +17,7 @@ def exit_handler():
 
 
 if __name__ == "__main__":
-    if(sys.argv.__contains__("--no-clear")):
+    if sys.argv.__contains__("--no-clear"):
         console.noclear = True
     atexit.register(exit_handler)
     db.setup_database()
@@ -77,3 +75,40 @@ if __name__ == "__main__":
 #    6: info     informational  normal operational messages that require no action
 #    7: debug    debug          information that is useful for debugging the application
 # Description
+
+
+## TODO:
+# FIXES:
+#   - fix changing username
+# NEW FEATURES:
+
+## General:
+#   - verify if password follows rules
+#   - encrypt sensitive data in DB
+#   - usernames must follow username rules
+
+## Consultant (user):
+#   - update own password
+#   - see/make/edit members NOT DELETE
+#   - search members
+
+## Admin (user):
+#   - update own password
+#   - search members
+#   - see/make/edit/delete members
+#   - see all users and their roles
+#   - reset passwords of users (consultant)
+#   - see/make/edit/delete users (consultant)
+#   - make/restore backups
+#   - see logs
+
+
+## SU ADMIN:
+#   - update own password
+#   - search members
+#   - see/make/edit/delete members
+#   - see all users and their roles
+#   - reset passwords of users/admins
+#   - see/make/edit/delete users/admins
+#   - make/restore backups
+#   - see logs

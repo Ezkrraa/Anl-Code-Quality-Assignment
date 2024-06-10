@@ -55,7 +55,7 @@ def user_menu(usr: db.User):
     while True:
         clear_console()
         show_logo()
-        user_options = ["Show members", "Logout"]
+        user_options = ["Search members", "Show all members", "Logout"]
         selection, index = pick(
             user_options,
             title=f"{logo}\nConsultant - MAIN MENU\nWelcome, {usr.username}!",
@@ -63,12 +63,19 @@ def user_menu(usr: db.User):
         )
         match index:
             case 0:
-                show_members()
+                clear_console()
+                members = db.get_all_members()
+                query = input("Search for a member:")
+                # TODO: add search function
             case 1:
+                show_members()
+            case 2:
                 show_error("Logging out now.")
                 break
             case _:
                 show_error("Invalid option.")
+
+
 
 
 def show_members() -> None:
