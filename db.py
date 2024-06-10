@@ -303,6 +303,15 @@ def edit_user(usr: User):
     cur.execute("REPLACE INTO users VALUES(?,?,?,?)", usr.toTuple())
     database_connection.commit()
 
+def create_member(member: Member):
+    cur = database_connection.cursor()
+    cur.execute("INSERT INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.toTuple())
+    database_connection.commit()
+
+def create_user(usr: User):
+    cur = database_connection.cursor()
+    cur.execute("INSERT INTO users VALUES(?,?,?,?)", usr.toTuple())
+    database_connection.commit()
 
 def get_all_members() -> list[Member]:
     cur = database_connection.cursor()

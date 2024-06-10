@@ -56,7 +56,7 @@ def user_menu(usr: db.User):
     while True:
         clear_console()
         show_logo()
-        user_options = ["Search members", "Show all members", "Change Password", "Logout"]
+        user_options = ["Search members", "Add Member", "Show all members", "Change Password", "Logout"]
         selection, index = pick(
             user_options,
             title=f"{logo}\nConsultant - MAIN MENU\nWelcome, {usr.username}!",
@@ -69,15 +69,43 @@ def user_menu(usr: db.User):
                 query = input("Search for a member:")
                 # TODO: add search function
             case 1:
-                show_members()
+                add_member()
             case 2:
-                change_password(usr)
+                show_members()
             case 3:
+                change_password(usr)
+            case 4:
                 show_error("Logging out now.")
                 break
             case _:
                 show_error("Invalid option.")
 
+
+def add_member():
+ while True:
+    firstname = input("Enter First Name: ")
+    lastname = input("Enter Last Name: ")
+    age = int(input("Enter Age: "))
+    gender = input("Enter Gender: ")
+    weight = int(input("Enter Weight: "))
+    address = input("Enter Address: ")
+    email = input("Enter Email: ")
+    phonenumber = input("Enter Phone Number: ")
+    registrationdate = input("Enter Registration Date: ")
+
+    new_member = db.Member(firstname, lastname, age, gender, weight, address, email, phonenumber, registrationdate, db.gen_memberid())
+    db.create_member(new_member)
+    break
+ 
+def add_consultant():
+    while True:
+        username = input("Enter Username: ")
+        password = input("Enter Password: ")
+        isadmin = False
+        new_consultant = db.User(username, password, 0, isadmin)
+        db.create_user(new_consultant)
+        break
+        
 
 def change_password(usr: db.User):
     while True:
@@ -101,6 +129,10 @@ def change_password(usr: db.User):
         db.edit_user(user)
         show_error("Password changed successfully.")
         break
+
+
+
+
 
 def show_members() -> None:
     while True:
@@ -262,7 +294,7 @@ def admin_menu(admin: db.User):
     while True:
         clear_console()
         show_logo()
-        admin_options = ["Show members", "Show consultants", "Change Password", "Logout"]
+        admin_options = ["Show members", "Show consultants", "Add Consultant", "Change Password", "Logout"]
         selection, index = pick(
             admin_options,
             title=f"{logo}\nADMIN - MAIN MENU\nWelcome, {admin.username}!",
@@ -274,8 +306,10 @@ def admin_menu(admin: db.User):
             case 1:
                 show_users(admin)
             case 2:
-                change_password(admin)
+                add_consultant()
             case 3:
+                change_password(admin)
+            case 4:
                 show_error("Logging out now.")
                 break
             case _:
