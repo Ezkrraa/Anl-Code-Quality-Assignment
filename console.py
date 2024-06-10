@@ -7,6 +7,7 @@ from typing import cast
 import platform, os
 from pick import pick
 import db
+import bcrypt
 
 noclear: bool = False
 
@@ -55,7 +56,7 @@ def user_menu(usr: db.User):
     while True:
         clear_console()
         show_logo()
-        user_options = ["Search members", "Show all members", "Logout"]
+        user_options = ["Search members", "Show all members", "Change Password", "Logout"]
         selection, index = pick(
             user_options,
             title=f"{logo}\nConsultant - MAIN MENU\nWelcome, {usr.username}!",
@@ -70,13 +71,36 @@ def user_menu(usr: db.User):
             case 1:
                 show_members()
             case 2:
+                change_password(usr)
+            case 3:
                 show_error("Logging out now.")
                 break
             case _:
                 show_error("Invalid option.")
 
 
-
+def change_password(usr: db.User):
+    while True:
+        clear_console()
+        show_logo()
+        print("Enter your current password:")
+        current_pw = getpass("> ")
+        print(current_pw) 
+        if not bcrypt.checkpw(current_pw.encode("utf-8"), usr.password): # type: ignore
+            print("Incorrect password.")
+            continue
+        print("Enter your new password:")
+        new_pw = getpass("> ")
+        print("Confirm your new password:")
+        confirm_pw = getpass("> ")
+        if new_pw != confirm_pw:
+            show_error("Passwords do not match.")
+            continue
+        new_crypt_pw = bcrypt.hashpw(new_pw.encode("utf-8"), bcrypt.gensalt())
+        user = db.User(usr.username, new_crypt_pw, usr.failedattempts, usr.isadmin)
+        db.edit_user(user)
+        show_error("Password changed successfully.")
+        break
 
 def show_members() -> None:
     while True:
@@ -99,7 +123,7 @@ def show_members() -> None:
 
 def show_member(member: db.Member) -> None:
     while True:
-        options = ["Return to user menu", "Edit information"]
+        options = ["Return to user menu", "Edit information",]
         result, index = pick(
             options=options, indicator=">", title=f"{logo}Member Info:\n{member}"
         )
@@ -238,7 +262,7 @@ def admin_menu(admin: db.User):
     while True:
         clear_console()
         show_logo()
-        admin_options = ["Show members", "Show consultants", "Logout"]
+        admin_options = ["Show members", "Show consultants", "Change Password", "Logout"]
         selection, index = pick(
             admin_options,
             title=f"{logo}\nADMIN - MAIN MENU\nWelcome, {admin.username}!",
@@ -250,6 +274,8 @@ def admin_menu(admin: db.User):
             case 1:
                 show_users(admin)
             case 2:
+                change_password(admin)
+            case 3:
                 show_error("Logging out now.")
                 break
             case _:
