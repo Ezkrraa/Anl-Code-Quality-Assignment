@@ -14,7 +14,7 @@ if __name__ == "__main__":
         == None
     ):
         db.seed_database()
-    db.create_test_admin()
+        db.create_test_admin()
     # unlock_account("test")
     console.login_screen()
 
