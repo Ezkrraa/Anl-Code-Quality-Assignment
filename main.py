@@ -4,22 +4,10 @@ import console
 from uuid import uuid4
 import sys
 
-# for closing the db connection on exit
-import atexit
-
-
-def exit_handler():
-    """Runs on close, closes the database connection"""
-    if db.database_connection:
-        db.database_connection.close()
-    console.clear_console()
-    print("Exited successfully.")
-
 
 if __name__ == "__main__":
     if sys.argv.__contains__("--no-clear"):
         console.noclear = True
-    atexit.register(exit_handler)
     db.setup_database()
     if (
         db.database_connection.cursor().execute("SELECT 1 FROM users").fetchone()
