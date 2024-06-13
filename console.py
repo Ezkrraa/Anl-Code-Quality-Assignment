@@ -77,27 +77,59 @@ def user_menu(usr: db.User):
                 # TODO: add search function
             case 1:
                 add_member()
+                show_message("Member added successfully.")
             case 2:
                 show_members(usr)
             case 3:
                 change_password(usr)
+                show_message("Password changed successfully.")
             case 4:
                 show_message("Logging out now.")
                 break
             case _:
                 show_message("Invalid option.")
 
-
 def add_member():
     while True:
         firstname = input("Enter First Name: ")
+        while not re.match("^[A-Za-z]*$", firstname):
+            print("Invalid First Name. Please enter again.")
+            firstname = input("Enter First Name: ")
+
         lastname = input("Enter Last Name: ")
-        age = int(input("Enter Age: "))
+        while not re.match("^[A-Za-z]*$", lastname):
+            print("Invalid Last Name. Please enter again.")
+            lastname = input("Enter Last Name: ")
+
+        age = input("Enter Age: ")
+        while not age.isdigit() or int(age) < 0:
+            print("Invalid Age. Please enter again.")
+            age = input("Enter Age: ")
+        age = int(age)
+
         gender = input("Enter Gender: ")
-        weight = int(input("Enter Weight: "))
+        while gender not in ['M', 'F']:
+            print("Invalid Gender. Please enter again.")
+            gender = input("Enter Gender: ")
+
+        weight = input("Enter Weight: ")
+        while not weight.isdigit() or int(weight) < 0:
+            print("Invalid Weight. Please enter again.")
+            weight = input("Enter Weight: ")
+        weight = int(weight)
+
         address = input("Enter Address: ")
+
         email = input("Enter Email: ")
+        while not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            print("Invalid Email. Please enter again.")
+            email = input("Enter Email: ")
+
         phonenumber = input("Enter Phone Number: ")
+        while not re.match("^[0-9]*$", phonenumber):
+            print("Invalid Phone Number. Please enter again.")
+            phonenumber = input("Enter Phone Number: ")
+
 
         new_member = db.Member(
             firstname,
@@ -114,15 +146,40 @@ def add_member():
         db.create_member(new_member)
         break
 
-
 def add_consultant():
     while True:
         username = input("Enter Username: ")
-        first_name = input("Enter first name: ")
-        last_name = input("Enter first name: ")
+        while not re.match("^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", username):
+            print("Invalid Username. Please enter again.")
+            print("Username must be unique and have a length of at least 8 characters")
+            print("Must be no longer than 10 characters")
+            print("Must be started with a letter or underscores (_)")
+            print("Can contain letters (a-z), numbers (0-9), underscores (_), apostrophes ('), and periods (.)")
+            print("No distinguish between lowercase or uppercase letters")
+            username = input("Enter Username: ")
+
+        password = input("Enter Password: ")
+        while not re.match("^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~!@#$%&_-+=`|\(){}[\]:;'<>,.?/])[A-Za-z\d~!@#$%&_-+=`|\(){}[\]:;'<>,.?/]{12,30}$", password):
+            print("Invalid Password. Please enter again.")
+            print("Password must have a length of at least 12 characters")
+            print("Must be no longer than 30 characters")
+            print("Can contain letters (a-z), (A-Z), numbers (0-9), Special characters such as ~!@#$%&_-+=`|\\(){}[]:;'<>,.?/")
+            print("Must have a combination of at least one lowercase letter, one uppercase letter, one digit, and one special character")
+            password = input("Enter Password: ")
+
+        first_name = input("Enter First Name: ")
+        while not re.match("^[A-Za-z]*$", firstname):
+            print("Invalid First Name. Please enter again.")
+            firstname = input("Enter First Name: ")
+
+        last_name = input("Enter Last Name: ")
+        while not re.match("^[A-Za-z]*$", lastname):
+            print("Invalid Last Name. Please enter again.")
+            lastname = input("Enter Last Name: ")
+
         new_consultant = db.User(
             username,
-            bcrypt.hashpw("ChangeMe_123?".encode("utf-8"), bcrypt.gensalt()),
+            bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()),
             role="Consultant",
             fname=first_name,
             lname=last_name,
@@ -144,6 +201,13 @@ def change_password(usr: db.User):
             continue
         print("Enter your new password:")
         new_pw = getpass("> ")
+        while not re.match("^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~!@#$%&_-+=`|\(){}[\]:;'<>,.?/])[A-Za-z\d~!@#$%&_-+=`|\(){}[\]:;'<>,.?/]{12,30}$", new_pw):
+            print("Invalid Password. Please enter again.")
+            print("Password must have a length of at least 12 characters")
+            print("Must be no longer than 30 characters")
+            print("Can contain letters (a-z), (A-Z), numbers (0-9), Special characters such as ~!@#$%&_-+=`|\\(){}[]:;'<>,.?/")
+            print("Must have a combination of at least one lowercase letter, one uppercase letter, one digit, and one special character")
+            new_pw = getpass("> ")
         print("Confirm your new password:")
         confirm_pw = getpass("> ")
         if new_pw != confirm_pw:
@@ -327,7 +391,15 @@ def edit_user(currentUser: db.User, usr: db.User) -> None:
                 db.edit_user(usr)
                 break
             case 2:
-                usr.username = input("Enter new username:")
+                usr.username = input("Enter Username: ")
+                while not re.match("^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", usr.username):
+                      print("Invalid Username. Please enter again.")
+                      print("Username must be unique and have a length of at least 8 characters")
+                      print("Must be no longer than 10 characters")
+                      print("Must be started with a letter or underscores (_)")
+                      print("Can contain letters (a-z), numbers (0-9), underscores (_), apostrophes ('), and periods (.)")
+                      print("No distinguish between lowercase or uppercase letters")
+                      usr.username = input("Enter Username: ")
             case 3:
                 usr.isadmin = not usr.isadmin
 
@@ -363,8 +435,10 @@ def admin_menu(admin: db.User):
                 show_users(admin)
             case 2:
                 add_consultant()
+                show_message("Consultant added successfully.")
             case 3:
                 change_password(admin)
+                show_message(f"{admin} password changed successfully.")
             case 4:
                 show_message("Logging out now.")
                 break
