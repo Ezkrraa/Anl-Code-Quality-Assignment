@@ -13,14 +13,13 @@ noclear: bool = False
 
 
 logo = """
-Ezra's
  █████╗ ███╗   ██╗██╗          ██████╗ ██╗  ██╗    ██╗  ██╗ █████╗ ███╗   ██╗██████╗ ██╗███╗   ██╗
 ██╔══██╗████╗  ██║██║         ██╔═══██╗██║  ██║    ██║  ██║██╔══██╗████╗  ██║██╔══██╗██║████╗  ██║
 ███████║██╔██╗ ██║██║         ██║   ██║███████║    ███████║███████║██╔██╗ ██║██║  ██║██║██╔██╗ ██║
 ██╔══██║██║╚██╗██║██║         ██║▄▄ ██║╚════██║    ██╔══██║██╔══██║██║╚██╗██║██║  ██║██║██║╚██╗██║
 ██║  ██║██║ ╚████║███████╗    ╚██████╔╝     ██║    ██║  ██║██║  ██║██║ ╚████║██████╔╝██║██║ ╚████║
 ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝     ╚══▀▀═╝      ╚═╝    ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═╝╚═╝  ╚═══╝
-                                                                                    made in Python
+             made by Lucas de Haas (1061095), Ezra van der Kolk (1052307) and Tommy Tran (1061590)
 """
 
 
@@ -71,7 +70,7 @@ def user_menu(usr: db.User):
             case 1:
                 add_member()
             case 2:
-                show_members()
+                show_members(usr)
             case 3:
                 change_password(usr)
             case 4:
@@ -134,7 +133,7 @@ def change_password(usr: db.User):
 
 
 
-def show_members() -> None:
+def show_members(user: db.User) -> None:
     while True:
         clear_console()
         options = ["Return"]
@@ -150,12 +149,12 @@ def show_members() -> None:
             case 0:
                 return
             case _:
-                show_member(members[cast(int, index) - 1])
+                show_member(user, members[cast(int, index) - 1])
 
 
-def show_member(member: db.Member) -> None:
+def show_member(user: db.User, member: db.Member) -> None:
     while True:
-        options = ["Return to user menu", "Edit information"]
+        options = ["Return to user menu", "Edit information", "Delete member"]
         result, index = pick(
             options=options, indicator=">", title=f"{logo}Member Info:\n{member}"
         )
@@ -164,6 +163,25 @@ def show_member(member: db.Member) -> None:
                 return
             case 1:
                 edit_member(member)
+            case 2:
+                confirm_options = ["Yes", "No"]
+                _, index = pick(
+                    options=confirm_options,
+                    title=f"Are you sure you want to delete {member.firstname} {member.lastname}'s account?",
+                    indicator="> ",
+                )
+                match index:
+                    case 0:
+                        db.delete_member(user, member)
+                        show_error(
+                            f"Successfully deleted {member.firstname} {member.lastname}'s account."
+                        )
+                        return
+                    case 1:
+                        show_error(
+                            f"Not deleting {member.firstname} {member.lastname}'s account."
+                        )
+                        continue
 
 
 def edit_member(member: db.Member):
@@ -241,7 +259,7 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
     if currentUser.isadmin and usr.failedattempts >= 3:
         resettable = True
     while True:
-        options = ["Return", "Edit information"]
+        options = ["Return", "Edit information", "Delete user"]
         if resettable:
             options.append("Unlock user")
         result, index = pick(
@@ -253,6 +271,21 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
             case 1:
                 edit_user(currentUser, usr)
             case 2:
+                confirm_options = ["Yes", "No"]
+                _, index = pick(
+                    options=confirm_options,
+                    title=f"Are you sure you want to delete {usr.username}'s account?",
+                    indicator="> ",
+                )
+                match index:
+                    case 0:
+                        db.delete_user(currentUser, usr)
+                        show_error(f"Successfully deleted {usr.username}'s account.")
+                        return
+                    case 1:
+                        show_error(f"Not deleting {usr.username}'s account.")
+                        continue
+            case 3:
                 if resettable:
                     db.unlock_account(currentUser, usr)
             case _:
@@ -302,7 +335,7 @@ def admin_menu(admin: db.User):
         )
         match index:
             case 0:
-                show_members()
+                show_members(admin)
             case 1:
                 show_users(admin)
             case 2:
@@ -327,7 +360,7 @@ def super_admin_menu():
         )
         match index:
             case 0:
-                show_members()
+                show_members(super_admin)
             case 1:
                 show_users(super_admin)
             case 2:
@@ -357,7 +390,9 @@ def login_screen():
             case e if isinstance(e, Exception) and (
                 str(attempt) == "UserNotFound" or str(attempt) == "WrongPassword"
             ):
-                show_error("No user found with that username and password.")
+                show_error(
+                    f"No user found with that username and password. ({uname}, {unhashed_pw}) because {attempt}"
+                )
             case e if isinstance(e, Exception) and str(
                 attempt
             ) == "TooManyFailedAttempts":
