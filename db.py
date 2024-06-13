@@ -496,6 +496,47 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
         return usr
 
 
+def search_members_and_users(search_key: str, include_users=False) -> list:
+    cursor = database_connection.cursor()
+    search_key = f"%{search_key.lower()}%"
+
+    member_query = """
+        SELECT 'member' as type, id, firstname, lastname, age, gender, weight, address, email, phonenumber, registrationdate
+        FROM members
+        WHERE LOWER(id) LIKE ?
+           OR LOWER(firstname) LIKE ?
+           OR LOWER(lastname) LIKE ?
+           OR LOWER(address) LIKE ?
+           OR LOWER(email) LIKE ?
+           OR LOWER(phonenumber) LIKE ?
+    """
+
+    user_query = """
+        SELECT 'user' as type, id, username, password, role, firstname, lastname, registrationdate, isadmin
+        FROM users
+        WHERE isadmin = 0 AND (
+           LOWER(id) LIKE ?
+           OR LOWER(username) LIKE ?
+           OR LOWER(firstname) LIKE ?
+           OR LOWER(lastname) LIKE ?
+           OR LOWER(registrationdate) LIKE ?
+        )
+    """
+
+    results = cursor.execute(member_query, [search_key] * 6).fetchall()
+
+    if include_users:
+        user_results = cursor.execute(user_query, [search_key] * 5).fetchall()
+        results.extend(user_results)
+
+    cursor.close()
+
+    members = [Member.fromtuple(row[1:]) for row in results if row[0] == 'member']
+    users = [User.fromtuple(row[1:]) for row in results if row[0] == 'user']
+
+    return members + users
+
+
 def write_log_short(severity: int, desc: str, info: str, suspicious=False):
     newlog = LogPoint(severity=severity, desc=desc, info=info, suspicious=suspicious)
     write_log(newlog)

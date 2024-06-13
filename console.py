@@ -1,7 +1,7 @@
 # for masking password input
 from getpass import getpass
 
-from typing import cast
+from typing import cast, Union
 
 # for clearing the console
 import platform, os
@@ -519,3 +519,27 @@ def pick(options: list[str], title: str = "") -> tuple[str, int]:
         except TypeError:
             show_message("Incorrect number format.")
             continue
+
+
+def show_search_menu(currentUser: db.User, search_key: str):
+    while True:
+        # Perform search based on search_key
+        results: list[Union[db.Member, db.User]] = db.search_members_and_users(search_key, include_users=currentUser.isadmin)
+
+        options = ["Return to main menu"]
+        for i, result in enumerate(results):
+            if isinstance(result, db.Member):
+                options.append(f"[{i:02}] Member: {result.firstname} {result.lastname} - ID: {result.id}")
+            elif isinstance(result, db.User):
+                options.append(f"[{i:02}] User: {result.username}")
+
+        # Display the menu and get the user's selection
+        selection, index = pick(options, title=f"{logo}\nSearch Results")
+        if index == 0:
+            return
+        else:
+            selected_result = results[cast(int, index) - 1]
+            if isinstance(selected_result, db.Member):
+                show_member(currentUser, selected_result)
+            elif isinstance(selected_result, db.User):
+                show_user(currentUser, selected_result)
