@@ -59,11 +59,11 @@ def user_menu(usr: db.User):
         clear_console()
         show_logo()
         user_options = [
+            "Logout",
             "Search members",
             "Add Member",
             "Show all members",
             "Change Password",
-            "Logout",
         ]
         selection, index = pick(
             user_options,
@@ -71,23 +71,22 @@ def user_menu(usr: db.User):
         )
         match index:
             case 0:
+                show_message("Logging out now.")
+                break
+            case 1:
                 clear_console()
                 members = db.get_all_members()
                 query = input("Search for a member:")
                 # TODO: add search function
-            case 1:
+            case 2:
                 add_member()
                 show_message("Member added successfully.")
-            case 2:
-                show_members(usr)
             case 3:
+                show_members(usr)
+            case 4:
                 change_password(usr)
                 show_message("Password changed successfully.")
-            case 4:
-                show_message("Logging out now.")
-                break
-            case _:
-                show_message("Invalid option.")
+
 
 def add_member():
     while True:
@@ -108,7 +107,7 @@ def add_member():
         age = int(age)
 
         gender = input("Enter Gender: ")
-        while gender not in ['M', 'F']:
+        while gender not in ["M", "F"]:
             print("Invalid Gender. Please enter again.")
             gender = input("Enter Gender: ")
 
@@ -130,7 +129,6 @@ def add_member():
             print("Invalid Phone Number. Please enter again.")
             phonenumber = input("Enter Phone Number: ")
 
-
         new_member = db.Member(
             firstname,
             lastname,
@@ -146,25 +144,35 @@ def add_member():
         db.create_member(new_member)
         break
 
+
 def add_consultant():
     while True:
         username = input("Enter Username: ")
-        while not re.match("^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", username):
+        while not re.match(r"^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", username):
             print("Invalid Username. Please enter again.")
             print("Username must be unique and have a length of at least 8 characters")
             print("Must be no longer than 10 characters")
             print("Must be started with a letter or underscores (_)")
-            print("Can contain letters (a-z), numbers (0-9), underscores (_), apostrophes ('), and periods (.)")
+            print(
+                "Can contain letters (a-z), numbers (0-9), underscores (_), apostrophes ('), and periods (.)"
+            )
             print("No distinguish between lowercase or uppercase letters")
             username = input("Enter Username: ")
 
         password = input("Enter Password: ")
-        while not re.match("^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~!@#$%&_-+=`|\(){}[\]:;'<>,.?/])[A-Za-z\d~!@#$%&_-+=`|\(){}[\]:;'<>,.?/]{12,30}$", password):
+        while not re.match(
+            r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~!@#$%&_-+=`|\(){}[\]:;'<>,.?/])[A-Za-z\d~!@#$%&_-+=`|\(){}[\]:;'<>,.?/]{12,30}$",
+            password,
+        ):
             print("Invalid Password. Please enter again.")
             print("Password must have a length of at least 12 characters")
             print("Must be no longer than 30 characters")
-            print("Can contain letters (a-z), (A-Z), numbers (0-9), Special characters such as ~!@#$%&_-+=`|\\(){}[]:;'<>,.?/")
-            print("Must have a combination of at least one lowercase letter, one uppercase letter, one digit, and one special character")
+            print(
+                "Can contain letters (a-z), (A-Z), numbers (0-9), Special characters such as ~!@#$%&_-+=`|\\(){}[]:;'<>,.?/"
+            )
+            print(
+                "Must have a combination of at least one lowercase letter, one uppercase letter, one digit, and one special character"
+            )
             password = input("Enter Password: ")
 
         first_name = input("Enter First Name: ")
@@ -201,12 +209,19 @@ def change_password(usr: db.User):
             continue
         print("Enter your new password:")
         new_pw = getpass("> ")
-        while not re.match("^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~!@#$%&_-+=`|\(){}[\]:;'<>,.?/])[A-Za-z\d~!@#$%&_-+=`|\(){}[\]:;'<>,.?/]{12,30}$", new_pw):
+        while not re.match(
+            r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~!@#$%&_-+=`|\(){}[\]:;'<>,.?/])[A-Za-z\d~!@#$%&_-+=`|\(){}[\]:;'<>,.?/]{12,30}$",
+            new_pw,
+        ):
             print("Invalid Password. Please enter again.")
             print("Password must have a length of at least 12 characters")
             print("Must be no longer than 30 characters")
-            print("Can contain letters (a-z), (A-Z), numbers (0-9), Special characters such as ~!@#$%&_-+=`|\\(){}[]:;'<>,.?/")
-            print("Must have a combination of at least one lowercase letter, one uppercase letter, one digit, and one special character")
+            print(
+                "Can contain letters (a-z), (A-Z), numbers (0-9), Special characters such as ~!@#$%&_-+=`|\\(){}[]:;'<>,.?/"
+            )
+            print(
+                "Must have a combination of at least one lowercase letter, one uppercase letter, one digit, and one special character"
+            )
             new_pw = getpass("> ")
         print("Confirm your new password:")
         confirm_pw = getpass("> ")
@@ -251,23 +266,23 @@ def show_member(user: db.User, member: db.Member) -> None:
             case 1:
                 edit_member(member)
             case 2 if user.isadmin:
-                confirm_options = ["Yes", "No"]
+                confirm_options = ["No", "Yes"]
                 _, index = pick(
                     options=confirm_options,
                     title=f"Are you sure you want to delete {member.firstname} {member.lastname}'s account?",
                 )
                 match index:
                     case 0:
+                        show_message(
+                            f"Not deleting {member.firstname} {member.lastname}'s account."
+                        )
+                        continue
+                    case 1:
                         db.delete_member(user, member)
                         show_message(
                             f"Successfully deleted {member.firstname} {member.lastname}'s account."
                         )
                         return
-                    case 1:
-                        show_message(
-                            f"Not deleting {member.firstname} {member.lastname}'s account."
-                        )
-                        continue
 
 
 def edit_member(member: db.Member):
@@ -329,7 +344,7 @@ def show_users(currentUser: db.User) -> None:
         users: list[db.User] = db.get_all_users(currentUser.isadmin)
         options = ["Return to main menu"]
         # input(users)
-        options.extend([f"[{i:02}] {users[i].username}" for i in range(len(users))])
+        options.extend([f"{users[i].username}" for i in range(len(users))])
         selection, index = pick(options, title=f"{logo}\nUser menu")
         match index:
             case 0:
@@ -351,19 +366,19 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
             case 1:
                 edit_user(currentUser, usr)
             case 2:
-                confirm_options = ["Yes", "No"]
+                confirm_options = ["No", "Yes"]
                 _, index = pick(
                     options=confirm_options,
                     title=f"Are you sure you want to delete {usr.username}'s account?",
                 )
                 match index:
                     case 0:
+                        show_message(f"Not deleting {usr.username}'s account.")
+                        continue
+                    case 1:
                         db.delete_user(currentUser, usr)
                         show_message(f"Successfully deleted {usr.username}'s account.")
                         return
-                    case 1:
-                        show_message(f"Not deleting {usr.username}'s account.")
-                        continue
             case _:
                 continue
 
@@ -385,24 +400,20 @@ def edit_user(currentUser: db.User, usr: db.User) -> None:
                 break
             case 2:
                 usr.username = input("Enter Username: ")
-                while not re.match("^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", usr.username):
-                      print("Invalid Username. Please enter again.")
-                      print("Username must be unique and have a length of at least 8 characters")
-                      print("Must be no longer than 10 characters")
-                      print("Must be started with a letter or underscores (_)")
-                      print("Can contain letters (a-z), numbers (0-9), underscores (_), apostrophes ('), and periods (.)")
-                      print("No distinguish between lowercase or uppercase letters")
-                      usr.username = input("Enter Username: ")
+                while not re.match(r"^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", usr.username):
+                    print("Invalid Username. Please enter again.")
+                    print(
+                        "Username must be unique and have a length of at least 8 characters"
+                    )
+                    print("Must be no longer than 10 characters")
+                    print("Must be started with a letter or underscores (_)")
+                    print(
+                        "Can contain letters (a-z), numbers (0-9), underscores (_), apostrophes ('), and periods (.)"
+                    )
+                    print("No distinguish between lowercase or uppercase letters")
+                    usr.username = input("Enter Username: ")
             case 3:
                 usr.isadmin = not usr.isadmin
-
-
-def change_user(option: int, usr: db.User, value: str) -> db.User:
-    value = value.lower()
-    match option:
-        case 0:
-            usr.username = value
-    return usr
 
 
 def admin_menu(admin: db.User):
@@ -410,11 +421,11 @@ def admin_menu(admin: db.User):
         clear_console()
         show_logo()
         admin_options = [
+            "Logout",
             "Show members",
             "Show consultants",
             "Add Consultant",
             "Change Password",
-            "Logout",
         ]
         selection, index = pick(
             admin_options,
@@ -422,18 +433,17 @@ def admin_menu(admin: db.User):
         )
         match index:
             case 0:
-                show_members(admin)
-            case 1:
-                show_users(admin)
-            case 2:
-                add_consultant()
-                show_message("Consultant added successfully.")
-            case 3:
-                change_password(admin)
-                show_message(f"{admin} password changed successfully.")
-            case 4:
                 show_message("Logging out now.")
                 break
+            case 1:
+                show_members(admin)
+            case 2:
+                show_users(admin)
+            case 3:
+                add_consultant()
+            case 4:
+                change_password(admin)
+                show_message("Changed password successfully.")
             case _:
                 show_message("Invalid option.")
 
@@ -449,19 +459,19 @@ def super_admin_menu():
         True,
     )
     while True:
-        su_admin_options = ["Show members", "Show admins and consultants", "Logout"]
+        su_admin_options = ["Logout", "Show members", "Show admins and consultants"]
         selection, index = pick(
             su_admin_options,
             title=f"{logo}\nSUPER ADMIN - MAIN MENU\nWelcome, super admin!",
         )
         match index:
             case 0:
-                show_members(super_admin)
-            case 1:
-                show_users(super_admin)
-            case 2:
                 show_message("Logging out now.")
                 break
+            case 1:
+                show_members(super_admin)
+            case 2:
+                show_users(super_admin)
             case _:
                 show_message("Invalid option.")
                 continue
@@ -497,24 +507,28 @@ def login_screen() -> None:
 def home_screen() -> None:
     while True:
         clear_console()
-        options = ["Login", "Exit"]
+        options = [
+            "Exit",
+            "Login",
+        ]
         _, num = pick(options, title=f"{logo}\nMain menu")
         match num:
             case 0:
-                login_screen()
-            case 1:
                 return
+            case 1:
+                login_screen()
 
 
 def pick(options: list[str], title: str = "") -> tuple[str, int]:
     while True:
         clear_console()
         print(title)
+        max_len = len(str(len(options)))
         for i in range(len(options)):
-            print(f"[{i:02}] {options[i]}")
+            print(f"[{str(i).zfill(max_len)}] {options[i]}")
         try:
-            selection = int(input("Select an option"))
-            if 0 < selection < len(options):
+            selection = int(input("Select an option: \n> "))
+            if 0 <= selection < len(options):
                 return (options[selection], selection)
         except TypeError:
             show_message("Incorrect number format.")
