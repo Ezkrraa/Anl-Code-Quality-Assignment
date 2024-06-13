@@ -1,7 +1,7 @@
 # for masking password input
 from getpass import getpass
 
-from typing import cast
+from typing import cast, Union
 
 # for clearing the console
 import platform, os
@@ -77,9 +77,8 @@ def user_menu(usr: db.User):
                 break
             case 1:
                 clear_console()
-                members = db.get_all_members()
                 query = input("Search for a member:")
-                # TODO: add search function
+                show_search_menu(usr, query)
             case 2:
                 add_member()
                 show_message("Member added successfully.")
@@ -413,6 +412,7 @@ def admin_menu(admin: db.User):
         show_logo()
         admin_options = [
             "Logout",
+            "Search members",
             "Show members",
             "Show consultants",
             "Add Consultant",
@@ -427,12 +427,16 @@ def admin_menu(admin: db.User):
                 show_message("Logging out now.")
                 break
             case 1:
-                show_members(admin)
+                clear_console()
+                query = input("Search for a member:")
+                show_search_menu(admin, query, role=1)
             case 2:
-                show_users(admin)
+                show_members(admin)
             case 3:
-                add_consultant()
+                show_users(admin)
             case 4:
+                add_consultant()
+            case 5:
                 change_password(admin)
                 show_message("Changed password successfully.")
             case _:
@@ -450,7 +454,7 @@ def super_admin_menu():
         True,
     )
     while True:
-        su_admin_options = ["Logout", "Show members", "Show admins and consultants"]
+        su_admin_options = ["Logout", "Search members", "Show members", "Show admins and consultants"]
         selection, index = pick(
             su_admin_options,
             title=f"{logo}\nSUPER ADMIN - MAIN MENU\nWelcome, super admin!",
@@ -460,8 +464,12 @@ def super_admin_menu():
                 show_message("Logging out now.")
                 break
             case 1:
-                show_members(super_admin)
+                clear_console()
+                query = input("Search for a member:")
+                show_search_menu(super_admin, query, role=2)
             case 2:
+                show_members(super_admin)
+            case 3:
                 show_users(super_admin)
             case _:
                 show_message("Invalid option.")
@@ -524,3 +532,28 @@ def pick(options: list[str], title: str = "") -> tuple[str, int]:
         except TypeError:
             show_message("Incorrect number format.")
             continue
+
+
+def show_search_menu(currentUser: db.User, search_key: str, role: int = 0):
+    while True:
+        clear_console()
+        # Perform search based on search_key
+        results: list[Union[db.Member, db.User]] = db.search_members_and_users(search_key, role)
+
+        options = ["Return to main menu"]
+        for i, result in enumerate(results):
+            if isinstance(result, db.Member):
+                options.append(f"[{i:02}] Member: {result.firstname} {result.lastname} - ID: {result.id}")
+            elif isinstance(result, db.User):
+                options.append(f"[{i:02}] User: {result.username}")
+
+        # Display the menu and get the user's selection
+        selection, index = pick(options, title=f"{logo}\nSearch Results")
+        if index == 0:
+            return
+        else:
+            selected_result = results[cast(int, index) - 1]
+            if isinstance(selected_result, db.Member):
+                show_member(currentUser, selected_result)
+            elif isinstance(selected_result, db.User):
+                show_user(currentUser, selected_result)
