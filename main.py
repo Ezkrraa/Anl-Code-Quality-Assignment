@@ -16,7 +16,7 @@ if __name__ == "__main__":
         db.seed_database()
         db.create_test_admin()
     # unlock_account("test")
-    console.login_screen()
+    console.home_screen()
 
 
 # SQL Tables Rows:

@@ -1,10 +1,8 @@
 # uuid v4, since it's unique and random
 from uuid import uuid4, UUID
 
+# typing is in python STD lib
 from typing import cast
-
-# to have strict type checking
-from pydantic import BaseModel
 
 # for database, hashing, logging and random data
 import bcrypt, sqlite3, datetime
