@@ -11,7 +11,9 @@ import db
 import bcrypt
 import datetime
 import re
+import random
 
+rand = random
 noclear: bool = False
 
 
@@ -106,10 +108,10 @@ def add_member():
             age = input("Enter Age: ")
         age = int(age)
 
-        gender = input("Enter Gender: ")
-        while gender not in ["M", "F"]:
+        gender = input("Enter Gender: ").upper()
+        while len(gender) != 1:
             print("Invalid Gender. Please enter again.")
-            gender = input("Enter Gender: ")
+            gender = input("Enter Gender: ").upper()
 
         weight = input("Enter Weight: ")
         while not weight.isdigit() or int(weight) < 0:
@@ -159,35 +161,23 @@ def add_consultant():
             print("No distinguish between lowercase or uppercase letters")
             username = input("Enter Username: ")
 
-        password = input("Enter Password: ")
-        while not re.match(
-            r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~!@#$%&_-+=`|\(){}[\]:;'<>,.?/])[A-Za-z\d~!@#$%&_-+=`|\(){}[\]:;'<>,.?/]{12,30}$",
-            password,
-        ):
-            print("Invalid Password. Please enter again.")
-            print("Password must have a length of at least 12 characters")
-            print("Must be no longer than 30 characters")
-            print(
-                "Can contain letters (a-z), (A-Z), numbers (0-9), Special characters such as ~!@#$%&_-+=`|\\(){}[]:;'<>,.?/"
-            )
-            print(
-                "Must have a combination of at least one lowercase letter, one uppercase letter, one digit, and one special character"
-            )
-            password = input("Enter Password: ")
-
         first_name = input("Enter First Name: ")
-        while not re.match("^[A-Za-z]*$", firstname):
+        while not re.match("^[A-Za-z]*$", first_name):
             print("Invalid First Name. Please enter again.")
-            firstname = input("Enter First Name: ")
+            first_name = input("Enter First Name: ")
 
         last_name = input("Enter Last Name: ")
-        while not re.match("^[A-Za-z]*$", lastname):
+        while not re.match("^[A-Za-z]*$", last_name):
             print("Invalid Last Name. Please enter again.")
-            lastname = input("Enter Last Name: ")
+            last_name = input("Enter Last Name: ")
 
+        temp_pw = f"TempPassword-{str(hex(rand.getrandbits(32))[2:])}"
         new_consultant = db.User(
             username,
-            bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()),
+            bcrypt.hashpw(
+                temp_pw.encode("utf-8"),
+                bcrypt.gensalt(),
+            ),
             role="Consultant",
             fname=first_name,
             lname=last_name,
@@ -195,6 +185,7 @@ def add_consultant():
             isadmin=False,
         )
         db.create_user(new_consultant)
+        show_message(f"Created user with the password {temp_pw}.")
         break
 
 
@@ -210,8 +201,8 @@ def change_password(usr: db.User):
         print("Enter your new password:")
         new_pw = getpass("> ")
         while not re.match(
-            r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~!@#$%&_-+=`|\(){}[\]:;'<>,.?/])[A-Za-z\d~!@#$%&_-+=`|\(){}[\]:;'<>,.?/]{12,30}$",
-            new_pw,
+            pattern=r"^(?=.*[A-Z].*[a-z].*[\d].*[!@#$%^&*()_+={}\[\]:;'\"?,.<>\/-]).{12,30}$",
+            string=new_pw,
         ):
             print("Invalid Password. Please enter again.")
             print("Password must have a length of at least 12 characters")

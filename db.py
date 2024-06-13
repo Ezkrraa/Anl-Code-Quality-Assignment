@@ -431,7 +431,7 @@ def create_member(member: Member):
 
 def create_user(usr: User):
     cur = database_connection.cursor()
-    cur.execute("INSERT INTO users VALUES(?,?,?,?)", usr.toTuple())
+    cur.execute("INSERT INTO users VALUES(?,?,?,?,?,?,?,?)", usr.toTuple())
     database_connection.commit()
 
 
