@@ -71,10 +71,8 @@ def user_menu(usr: db.User):
         )
         match index:
             case 0:
-                clear_console()
-                members = db.get_all_members()
                 query = input("Search for a member:")
-                # TODO: add search function
+                show_search_menu(usr, query)
             case 1:
                 add_member()
                 show_message("Member added successfully.")
@@ -410,6 +408,7 @@ def admin_menu(admin: db.User):
         clear_console()
         show_logo()
         admin_options = [
+            "Search members",
             "Show members",
             "Show consultants",
             "Add Consultant",
@@ -422,16 +421,19 @@ def admin_menu(admin: db.User):
         )
         match index:
             case 0:
-                show_members(admin)
+                query = input("Search for a member:")
+                show_search_menu(admin, query)
             case 1:
-                show_users(admin)
+                show_members(admin)
             case 2:
+                show_users(admin)
+            case 3:
                 add_consultant()
                 show_message("Consultant added successfully.")
-            case 3:
+            case 4:
                 change_password(admin)
                 show_message(f"{admin} password changed successfully.")
-            case 4:
+            case 5:
                 show_message("Logging out now.")
                 break
             case _:
@@ -449,17 +451,20 @@ def super_admin_menu():
         True,
     )
     while True:
-        su_admin_options = ["Show members", "Show admins and consultants", "Logout"]
+        su_admin_options = [ "Search Members", "Show members", "Show admins and consultants", "Logout"]
         selection, index = pick(
             su_admin_options,
             title=f"{logo}\nSUPER ADMIN - MAIN MENU\nWelcome, super admin!",
         )
         match index:
             case 0:
-                show_members(super_admin)
+                query = input("Search for a member:")
+                show_search_menu(super_admin, query, isSuperAdmin=True)
             case 1:
-                show_users(super_admin)
+                show_members(super_admin)
             case 2:
+                show_users(super_admin)
+            case 3:
                 show_message("Logging out now.")
                 break
             case _:
@@ -521,10 +526,11 @@ def pick(options: list[str], title: str = "") -> tuple[str, int]:
             continue
 
 
-def show_search_menu(currentUser: db.User, search_key: str):
+def show_search_menu(currentUser: db.User, search_key: str, isSuperAdmin: bool = False):
     while True:
+        clear_console()
         # Perform search based on search_key
-        results: list[Union[db.Member, db.User]] = db.search_members_and_users(search_key, include_users=currentUser.isadmin)
+        results: list[Union[db.Member, db.User]] = db.search_members_and_users(search_key, include_users=isSuperAdmin)
 
         options = ["Return to main menu"]
         for i, result in enumerate(results):
