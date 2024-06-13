@@ -68,6 +68,7 @@ if __name__ == "__main__":
 ## TODO:
 # FIXES:
 #   - fix changing username
+#   - fix logo
 # NEW FEATURES:
 
 ## General:

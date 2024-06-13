@@ -25,19 +25,25 @@ class LogPoint:
     timestamp: datetime.datetime
     severity: int
     description: str
+    info: str
+    suspicious: bool
 
-    def __init__(self, severity, desc):
+    def __init__(self, severity, desc, info, suspicious=False):
         self.id = uuid4()
         self.timestamp = datetime.datetime.now()
         self.severity = severity
         self.description = desc
+        self.info = info
+        self.suspicious = suspicious
 
-    def toTuple(self) -> tuple[bytes, str, int, str]:
+    def toTuple(self) -> tuple[bytes, str, int, str, str, bool]:
         return (
             self.id.bytes,
             self.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
             self.severity,
             self.description,
+            self.info,
+            self.suspicious,
         )
 
 
@@ -51,33 +57,63 @@ class User:
     registrationdate: str
     isadmin: bool
 
-    def __init__(self, uname, pw, role, fname, lname, regdate, isadmin=False, uid: bytes = uuid4().bytes) -> None:
-        self.id = UUID(bytes=uid)
-        self.username = uname
-        self.password = pw
-        self.role = role
-        self.firstname = fname
-        self.lastname = lname
-        self.registrationdate = regdate
-        self.isadmin = isadmin
+    def __init__(
+        self,
+        uname,
+        pw,
+        role,
+        fname,
+        lname,
+        regdate,
+        isadmin=False,
+        uid: bytes = uuid4().bytes,
+    ) -> None:
+        self.id: UUID = UUID(bytes=uid)
+        self.username: str = uname
+        self.password: bytes = pw
+        self.role: str = role
+        self.firstname: str = fname
+        self.lastname: str = lname
+        self.registrationdate: str = regdate
+        self.isadmin: bool = isadmin
 
     @classmethod
     def fromtuple(cls, data: tuple[bytes, str, bytes, str, str, str, str, bool]):
-        return cls(data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[0])
+        return cls(
+            data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[0]
+        )
 
     @classmethod
     def genRandom(cls):
-        username = fake.first_name()
+        username = fake.first_name() + str(rand.randint(1000, 9999))
         password = bcrypt.hashpw("password123".encode("utf-8"), bcrypt.gensalt())
         role = "user"
         firstname = fake.first_name()
         lastname = fake.last_name()
         registrationdate = datetime.datetime.now().strftime("%Y-%m-%d")
         isadmin = False
-        return cls(username, password, role, firstname, lastname, registrationdate, isadmin, uuid4().bytes)
+        return cls(
+            username,
+            password,
+            role,
+            firstname,
+            lastname,
+            registrationdate,
+            isadmin,
+            uuid4().bytes,
+        )
 
     def toTuple(self) -> tuple[bytes, str, bytes, str, str, str, str, bool]:
-        return (self.id.bytes, self.username, self.password, self.role, self.firstname, self.lastname, self.registrationdate, self.isadmin)
+        return (
+            self.id.bytes,
+            self.username,
+            self.password,
+            self.role,
+            self.firstname,
+            self.lastname,
+            self.registrationdate,
+            self.isadmin,
+        )
 
     def __str__(self) -> str:
         return f"Name: {self.username}\nRole: {self.role}\nIs admin: {self.isadmin}\nFull name: {self.firstname} {self.lastname}\nRegistration Date: {self.registrationdate}"
@@ -94,9 +130,20 @@ class Member:
     email: str
     phonenumber: str
     registrationdate: str
-    membership_id: str
 
-    def __init__(self, fname, lname, age, gender, weight, addr, email, phone, regdate, membership_id, id="0") -> None:
+    def __init__(
+        self,
+        fname,
+        lname,
+        age,
+        gender,
+        weight,
+        addr,
+        email,
+        phone,
+        regdate,
+        id="0",
+    ) -> None:
         if id == "0":
             self.id = gen_memberid()
         else:
@@ -110,11 +157,21 @@ class Member:
         self.email = email
         self.phonenumber = phone
         self.registrationdate = regdate
-        self.membership_id = membership_id
 
     @classmethod
-    def fromtuple(cls, data: tuple[str, str, str, int, str, int, str, str, str, str, str]):
-        return cls(data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], data[10], data[0])
+    def fromtuple(cls, data: tuple[str, str, str, int, str, int, str, str, str, str]):
+        return cls(
+            data[1],
+            data[2],
+            data[3],
+            data[4],
+            data[5],
+            data[6],
+            data[7],
+            data[8],
+            data[9],
+            data[0],
+        )
 
     @classmethod
     def genrandom(cls):
@@ -128,16 +185,34 @@ class Member:
         email = fake.email()
         phonenumber = str(rand.randint(10000000, 99999999))
         registrationdate = str(datetime.datetime.now().date().today())
-        membership_id = uuid4().hex
-        return cls(firstname, lastname, age, gender, weight, address, email, phonenumber, registrationdate,
-                   membership_id, id)
+        return cls(
+            firstname,
+            lastname,
+            age,
+            gender,
+            weight,
+            address,
+            email,
+            phonenumber,
+            registrationdate,
+        )
 
-    def toTuple(self) -> tuple[str, str, str, int, str, int, str, str, str, str, str]:
-        return (self.id, self.firstname, self.lastname, self.age, self.gender, self.weight, self.address, self.email,
-                self.phonenumber, self.registrationdate, self.membership_id)
+    def toTuple(self) -> tuple[str, str, str, int, str, int, str, str, str, str]:
+        return (
+            self.id,
+            self.firstname,
+            self.lastname,
+            self.age,
+            self.gender,
+            self.weight,
+            self.address,
+            self.email,
+            self.phonenumber,
+            self.registrationdate,
+        )
 
     def __str__(self) -> str:
-        return f"ID: {self.id}\nName: {self.firstname} {self.lastname}\nAge: {self.age}\nGender: {self.gender}\nWeight: {self.weight}\nAddress: {self.address}\nEmail: {self.email}\nPhone number: {self.phonenumber}\nRegistration Date: {self.registrationdate}\nMembership ID: {self.membership_id}"
+        return f"ID: {self.id}\nName: {self.firstname} {self.lastname}\nAge: {self.age}\nGender: {self.gender}\nWeight: {self.weight}\nAddress: {self.address}\nEmail: {self.email}\nPhone number: {self.phonenumber}\nRegistration Date: {self.registrationdate}"
 
 
 def setup_database() -> None:
@@ -145,13 +220,19 @@ def setup_database() -> None:
     global database_connection
     try:
         database_connection = sqlite3.connect("database.db")
-        write_log_short(6, f"starting up using sqlite v{sqlite3.sqlite_version}")
     except sqlite3.Error as e:
-        write_log_short(2, f"Failed to connect to database, got error {e}")
+        raise Exception(f"Failed to connect to database, got error {e}")
     finally:
         if database_connection:
             create_tables()
+            write_log_short(
+                6,
+                "Startup successful",
+                f"starting up using sqlite v{sqlite3.sqlite_version}",
+            )
             return
+        else:
+            raise Exception("Failed to connect to database, no connection was found")
 
 
 def create_tables():
@@ -164,7 +245,7 @@ def create_tables():
         firstname TEXT,
         lastname TEXT,
         registrationdate TEXT,
-        isadmin: bool
+        isadmin BOOLEAN
         )""",
         """CREATE TABLE IF NOT EXISTS members (
         id CHAR(10) PRIMARY KEY,
@@ -176,8 +257,7 @@ def create_tables():
         address TEXT,
         email TEXT,
         phonenumber TEXT,
-        registrationdate TEXT,
-        membership_id TEXT UNIQUE
+        registrationdate TEXT
         )""",
         """CREATE TABLE IF NOT EXISTS logs (
         id BLOB(16) PRIMARY KEY,
@@ -185,7 +265,7 @@ def create_tables():
         username TEXT,
         description TEXT,
         additional_info TEXT,
-        uspicious BOOLEAN
+        suspicious BOOLEAN
         )""",
     ]
     try:
@@ -195,7 +275,9 @@ def create_tables():
         cursor.close()
         database_connection.commit()
     except sqlite3.Error as e:
-        write_log_short(5, f"Tried to seed database, but ran into error {e}")
+        write_log_short(
+            4, "Seeding error", f"Tried to seed database, but ran into error {e}"
+        )
 
 
 def create_test_admin():
@@ -204,29 +286,69 @@ def create_test_admin():
     bcryptpass = bcrypt.hashpw(testpw.encode("utf-8"), bcrypt.gensalt())
     cur = database_connection.cursor()
     if cur.execute("SELECT 1 FROM users WHERE isadmin = 1").fetchone() != None:
-        write_log_short(6, "Was told to make a new user for testing, but users table wasn't empty")
+        write_log_short(
+            5,
+            "Seeding error",
+            "Was told to make a new user for testing, but users table wasn't empty",
+        )
         return
     try:
         registrationdate = datetime.datetime.now().strftime("%Y-%m-%d")
-        cur.execute("INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)", (uuid4().bytes, "admin", bcryptpass, "admin", "Admin", "User", registrationdate, True))
-        cur.execute("INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)", (uuid4().bytes, "user", bcryptpass, "user", "Test", "User", registrationdate, False))
+        cur.execute(
+            "INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                uuid4().bytes,
+                "admin",
+                bcryptpass,
+                "admin",
+                "Admin",
+                "User",
+                registrationdate,
+                True,
+            ),
+        )
+        cur.execute(
+            "INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                uuid4().bytes,
+                "user",
+                bcryptpass,
+                "user",
+                "Test",
+                "User",
+                registrationdate,
+                False,
+            ),
+        )
         database_connection.commit()
         cur.close()
     except sqlite3.Error as e:
-        write_log_short(4, f"Tried to add a new user for testing, but ran into error {e}")
+        write_log_short(
+            4,
+            "Seeding error",
+            f"Tried to add a new user for testing, but ran into error {e}",
+        )
     finally:
-        write_log_short(6, "Added a new user for testing, with default credentials")
+        write_log_short(
+            6,
+            "Seeded successfully",
+            "Added a new user for testing, with default credentials",
+        )
 
 
 def seed_database():
     cursor = database_connection.cursor()
     seed_members = [Member.genrandom().toTuple() for _ in range(50)]
-    cursor.executemany("INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", seed_members)
+    cursor.executemany(
+        "INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", seed_members
+    )
     seed_users = [User.genRandom().toTuple() for _ in range(20)]
     cursor.executemany("INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)", seed_users)
     cursor.close()
     database_connection.commit()
-    write_log_short(6, "Successfully seeded members and users tables")
+    write_log_short(
+        6, "Seeded successfully", "Successfully seeded members and users tables"
+    )
     create_test_admin()
 
 
@@ -270,7 +392,7 @@ def gen_memberid() -> str:
 
 def edit_member(member: Member):
     cur = database_connection.cursor()
-    cur.execute("REPLACE INTO members VALUES(?,?,?,?,?,?,?,?,?,?,?)", member.toTuple())
+    cur.execute("REPLACE INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.toTuple())
     cur.close()
     database_connection.commit()
 
@@ -281,10 +403,18 @@ def delete_member(user: User, member: Member) -> bool:
         cur.execute("DELETE FROM members WHERE id=?", (member.id,))
         database_connection.commit()
         cur.close()
-        write_log_short(6, f"{user.username} deleted the account of {member.firstname} {member.lastname}.")
+        write_log_short(
+            6,
+            "Deleted account",
+            f"{user.username} deleted the account of {member.firstname} {member.lastname}.",
+        )
         return True
     except Exception as e:
-        write_log_short(4, f"Failed to delete member {member.firstname} {member.lastname} due to error {e}")
+        write_log_short(
+            4,
+            "Deletion failure",
+            f"Failed to delete member {member.firstname} {member.lastname} due to error {e}",
+        )
         return False
 
 
@@ -294,15 +424,18 @@ def edit_user(usr: User):
     cur.close()
     database_connection.commit()
 
+
 def create_member(member: Member):
     cur = database_connection.cursor()
     cur.execute("INSERT INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.toTuple())
     database_connection.commit()
 
+
 def create_user(usr: User):
     cur = database_connection.cursor()
     cur.execute("INSERT INTO users VALUES(?,?,?,?)", usr.toTuple())
     database_connection.commit()
+
 
 def delete_user(admin: User, user: User) -> bool:
     try:
@@ -310,10 +443,18 @@ def delete_user(admin: User, user: User) -> bool:
         cur.execute("DELETE FROM users WHERE id=?", (user.id.bytes,))
         database_connection.commit()
         cur.close()
-        write_log_short(6, f"{admin.username} deleted the account of {user.username}.")
+        write_log_short(
+            6,
+            "Deletion success",
+            f"{admin.username} deleted the account of {user.username}.",
+        )
         return True
     except Exception as e:
-        write_log_short(4, f"Failed to delete user {user.username} due to error {e}")
+        write_log_short(
+            4,
+            "Deletion failure",
+            f"Failed to delete user {user.username} due to error {e}",
+        )
         return False
 
 
@@ -328,7 +469,9 @@ def get_all_users(include_admins=False) -> list[User]:
     if include_admins:
         users = cur.execute("SELECT * FROM users").fetchall()
     else:
-        users = cur.execute("SELECT * FROM users WHERE isadmin = 0 ORDER BY username").fetchall()
+        users = cur.execute(
+            "SELECT * FROM users WHERE isadmin = 0 ORDER BY username"
+        ).fetchall()
     return [User.fromtuple(row) for row in users]
 
 
@@ -347,20 +490,21 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
 
     usr: User = User.fromtuple(data=output)
     if not bcrypt.checkpw(attemptPassword.encode("utf-8"), usr.password):
-        write_log_short(6, f"Failed attempt to log into account {uname}")
+        write_log_short(
+            6, "Failed login", f"Failed attempt to log into account {uname}"
+        )
         return Exception("WrongPassword")
     else:
         return usr
 
 
-def write_log_short(severity: int, desc: str):
-    newlog = LogPoint(severity=severity, desc=desc)
+def write_log_short(severity: int, desc: str, info: str, suspicious=False):
+    newlog = LogPoint(severity=severity, desc=desc, info=info, suspicious=suspicious)
     write_log(newlog)
 
 
 def write_log(logpoint: LogPoint):
     cursor = database_connection.cursor()
-    cursor.execute("INSERT INTO logs VALUES(?, ?, ?, ?)", logpoint.toTuple())
+    cursor.execute("INSERT INTO logs VALUES(?, ?, ?, ?, ?, ?)", logpoint.toTuple())
     cursor.close()
     database_connection.commit()
-

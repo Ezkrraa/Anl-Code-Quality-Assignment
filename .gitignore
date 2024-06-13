@@ -3,6 +3,7 @@
 
 # ignore dbs
 *.db
+*.db.bak
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

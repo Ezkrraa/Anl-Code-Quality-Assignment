@@ -5,9 +5,11 @@ from typing import cast
 
 # for clearing the console
 import platform, os
-from pick import pick
+from pick import pick  # TODO: write own
 import db
 import bcrypt
+import datetime
+import re
 
 noclear: bool = False
 
@@ -27,7 +29,7 @@ def show_logo() -> None:
     print(logo)
 
 
-def show_error(err: str):
+def show_message(err: str):
     clear_console()
     print(err)
     input("[Press enter to continue.]")
@@ -55,7 +57,13 @@ def user_menu(usr: db.User):
     while True:
         clear_console()
         show_logo()
-        user_options = ["Search members", "Add Member", "Show all members", "Change Password", "Logout"]
+        user_options = [
+            "Search members",
+            "Add Member",
+            "Show all members",
+            "Change Password",
+            "Logout",
+        ]
         selection, index = pick(
             user_options,
             title=f"{logo}\nConsultant - MAIN MENU\nWelcome, {usr.username}!",
@@ -74,37 +82,56 @@ def user_menu(usr: db.User):
             case 3:
                 change_password(usr)
             case 4:
-                show_error("Logging out now.")
+                show_message("Logging out now.")
                 break
             case _:
-                show_error("Invalid option.")
+                show_message("Invalid option.")
 
 
 def add_member():
- while True:
-    firstname = input("Enter First Name: ")
-    lastname = input("Enter Last Name: ")
-    age = int(input("Enter Age: "))
-    gender = input("Enter Gender: ")
-    weight = int(input("Enter Weight: "))
-    address = input("Enter Address: ")
-    email = input("Enter Email: ")
-    phonenumber = input("Enter Phone Number: ")
-    registrationdate = input("Enter Registration Date: ")
+    while True:
+        firstname = input("Enter First Name: ")
+        lastname = input("Enter Last Name: ")
+        age = int(input("Enter Age: "))
+        gender = input("Enter Gender: ")
+        weight = int(input("Enter Weight: "))
+        address = input("Enter Address: ")
+        email = input("Enter Email: ")
+        phonenumber = input("Enter Phone Number: ")
 
-    new_member = db.Member(firstname, lastname, age, gender, weight, address, email, phonenumber, registrationdate, db.gen_memberid())
-    db.create_member(new_member)
-    break
- 
+        new_member = db.Member(
+            firstname,
+            lastname,
+            age,
+            gender,
+            weight,
+            address,
+            email,
+            phonenumber,
+            datetime.date.today(),
+            db.gen_memberid(),
+        )
+        db.create_member(new_member)
+        break
+
+
 def add_consultant():
     while True:
         username = input("Enter Username: ")
-        password = input("Enter Password: ")
-        isadmin = False
-        new_consultant = db.User(username, password, 0, isadmin)
+        first_name = input("Enter first name: ")
+        last_name = input("Enter first name: ")
+        new_consultant = db.User(
+            username,
+            bcrypt.hashpw("ChangeMe_123?".encode("utf-8"), bcrypt.gensalt()),
+            role="Consultant",
+            fname=first_name,
+            lname=last_name,
+            regdate=datetime.date.today(),
+            isadmin=False,
+        )
         db.create_user(new_consultant)
         break
-        
+
 
 def change_password(usr: db.User):
     while True:
@@ -112,25 +139,21 @@ def change_password(usr: db.User):
         show_logo()
         print("Enter your current password:")
         current_pw = getpass("> ")
-        print(current_pw) 
-        if not bcrypt.checkpw(current_pw.encode("utf-8"), usr.password): # type: ignore
-            print("Incorrect password.")
+        if not bcrypt.checkpw(current_pw.encode("utf-8"), usr.password):
+            show_message("Invalid password. Try again.")
             continue
         print("Enter your new password:")
         new_pw = getpass("> ")
         print("Confirm your new password:")
         confirm_pw = getpass("> ")
         if new_pw != confirm_pw:
-            show_error("Passwords do not match.")
+            show_message("Passwords do not match.")
             continue
         new_crypt_pw = bcrypt.hashpw(new_pw.encode("utf-8"), bcrypt.gensalt())
-        user = db.User(usr.username, new_crypt_pw, usr.failedattempts, usr.isadmin)
-        db.edit_user(user)
-        show_error("Password changed successfully.")
+        usr.password = new_crypt_pw
+        db.edit_user(usr)
+        show_message("Password changed successfully.")
         break
-
-
-
 
 
 def show_members(user: db.User) -> None:
@@ -154,7 +177,9 @@ def show_members(user: db.User) -> None:
 
 def show_member(user: db.User, member: db.Member) -> None:
     while True:
-        options = ["Return to user menu", "Edit information", "Delete member"]
+        options = ["Return to user menu", "Edit information"]
+        if user.isadmin:
+            options.append("Delete member")
         result, index = pick(
             options=options, indicator=">", title=f"{logo}Member Info:\n{member}"
         )
@@ -163,7 +188,7 @@ def show_member(user: db.User, member: db.Member) -> None:
                 return
             case 1:
                 edit_member(member)
-            case 2:
+            case 2 if user.isadmin:
                 confirm_options = ["Yes", "No"]
                 _, index = pick(
                     options=confirm_options,
@@ -173,12 +198,12 @@ def show_member(user: db.User, member: db.Member) -> None:
                 match index:
                     case 0:
                         db.delete_member(user, member)
-                        show_error(
+                        show_message(
                             f"Successfully deleted {member.firstname} {member.lastname}'s account."
                         )
                         return
                     case 1:
-                        show_error(
+                        show_message(
                             f"Not deleting {member.firstname} {member.lastname}'s account."
                         )
                         continue
@@ -255,13 +280,8 @@ def show_users(currentUser: db.User) -> None:
 
 
 def show_user(currentUser: db.User, usr: db.User) -> None:
-    resettable = False
-    if currentUser.isadmin and usr.failedattempts >= 3:
-        resettable = True
     while True:
         options = ["Return", "Edit information", "Delete user"]
-        if resettable:
-            options.append("Unlock user")
         result, index = pick(
             options=options, title=f"{logo}User Info:\n{usr}", indicator=">"
         )
@@ -280,14 +300,11 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
                 match index:
                     case 0:
                         db.delete_user(currentUser, usr)
-                        show_error(f"Successfully deleted {usr.username}'s account.")
+                        show_message(f"Successfully deleted {usr.username}'s account.")
                         return
                     case 1:
-                        show_error(f"Not deleting {usr.username}'s account.")
+                        show_message(f"Not deleting {usr.username}'s account.")
                         continue
-            case 3:
-                if resettable:
-                    db.unlock_account(currentUser, usr)
             case _:
                 continue
 
@@ -327,7 +344,13 @@ def admin_menu(admin: db.User):
     while True:
         clear_console()
         show_logo()
-        admin_options = ["Show members", "Show consultants", "Add Consultant", "Change Password", "Logout"]
+        admin_options = [
+            "Show members",
+            "Show consultants",
+            "Add Consultant",
+            "Change Password",
+            "Logout",
+        ]
         selection, index = pick(
             admin_options,
             title=f"{logo}\nADMIN - MAIN MENU\nWelcome, {admin.username}!",
@@ -343,14 +366,22 @@ def admin_menu(admin: db.User):
             case 3:
                 change_password(admin)
             case 4:
-                show_error("Logging out now.")
+                show_message("Logging out now.")
                 break
             case _:
-                show_error("Invalid option.")
+                show_message("Invalid option.")
 
 
 def super_admin_menu():
-    super_admin: db.User = db.User("super_admin", "", -1, True)
+    super_admin: db.User = db.User(
+        "super_admin",
+        bcrypt.hashpw("Admin_123?".encode("utf-8"), bcrypt.gensalt()),
+        "super",
+        "admin",
+        "",
+        -1,
+        True,
+    )
     while True:
         su_admin_options = ["Show members", "Show admins and consultants", "Logout"]
         selection, index = pick(
@@ -364,10 +395,10 @@ def super_admin_menu():
             case 1:
                 show_users(super_admin)
             case 2:
-                show_error("Logging out now.")
+                show_message("Logging out now.")
                 break
             case _:
-                show_error("Invalid option.")
+                show_message("Invalid option.")
                 continue
 
 
@@ -390,16 +421,8 @@ def login_screen():
             case e if isinstance(e, Exception) and (
                 str(attempt) == "UserNotFound" or str(attempt) == "WrongPassword"
             ):
-                show_error(
-                    f"No user found with that username and password. ({uname}, {unhashed_pw}) because {attempt}"
-                )
-            case e if isinstance(e, Exception) and str(
-                attempt
-            ) == "TooManyFailedAttempts":
-                show_error(
-                    "You have had too many failed attempts. Ask an admin to unlock your account."
-                )
+                show_message(f"No user found with that username and password.")
             case e if isinstance(e, Exception) and str(attempt) == "SuperAdmin":
                 super_admin_menu()
             case e if isinstance(e, Exception):
-                show_error(str(attempt))
+                show_message(str(attempt))
