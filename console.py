@@ -429,7 +429,7 @@ def admin_menu(admin: db.User):
             case 1:
                 clear_console()
                 query = input("Search for a member:")
-                show_search_menu(admin, query)
+                show_search_menu(admin, query, role=1)
             case 2:
                 show_members(admin)
             case 3:
@@ -466,7 +466,7 @@ def super_admin_menu():
             case 1:
                 clear_console()
                 query = input("Search for a member:")
-                show_search_menu(super_admin, query, isSuperAdmin=True)
+                show_search_menu(super_admin, query, role=2)
             case 2:
                 show_members(super_admin)
             case 3:
@@ -534,11 +534,11 @@ def pick(options: list[str], title: str = "") -> tuple[str, int]:
             continue
 
 
-def show_search_menu(currentUser: db.User, search_key: str, isSuperAdmin: bool = False):
+def show_search_menu(currentUser: db.User, search_key: str, role: int = 0):
     while True:
         clear_console()
         # Perform search based on search_key
-        results: list[Union[db.Member, db.User]] = db.search_members_and_users(search_key, include_users=isSuperAdmin)
+        results: list[Union[db.Member, db.User]] = db.search_members_and_users(search_key, role)
 
         options = ["Return to main menu"]
         for i, result in enumerate(results):

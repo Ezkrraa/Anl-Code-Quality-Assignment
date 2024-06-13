@@ -431,7 +431,7 @@ def create_member(member: Member):
 
 def create_user(usr: User):
     cur = database_connection.cursor()
-    cur.execute("INSERT INTO users VALUES(?,?,?,?,?,?,?,?)", usr.toTuple())
+    cur.execute("INSERT INTO users VALUES(?,?,?,?)", usr.toTuple())
     database_connection.commit()
 
 
@@ -496,7 +496,7 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
         return usr
 
 
-def search_members_and_users(search_key: str, include_users=False) -> list:
+def search_members_and_users(search_key: str, role: int) -> list:
     cursor = database_connection.cursor()
     search_key = f"%{search_key.lower()}%"
 
@@ -511,41 +511,42 @@ def search_members_and_users(search_key: str, include_users=False) -> list:
            OR LOWER(phonenumber) LIKE ?
     """
 
-    if include_users:
-        user_query = """
-            SELECT 'user' as type, id, username, password, role, firstname, lastname, registrationdate, isadmin
-            FROM users
-            WHERE (
-               LOWER(id) LIKE ?
-               OR LOWER(username) LIKE ?
-               OR LOWER(firstname) LIKE ?
-               OR LOWER(lastname) LIKE ?
-               OR LOWER(registrationdate) LIKE ?
-            )
-        """
-    else:
-        user_query = """
-            SELECT 'user' as type, id, username, password, role, firstname, lastname, registrationdate, isadmin
-            FROM users
-            WHERE isadmin = 0 AND (
-               LOWER(id) LIKE ?
-               OR LOWER(username) LIKE ?
-               OR LOWER(firstname) LIKE ?
-               OR LOWER(lastname) LIKE ?
-               OR LOWER(registrationdate) LIKE ?
-            )
-        """
+    admin_query = """
+        SELECT 'user' as type, id, username, password, role, firstname, lastname, registrationdate, isadmin
+        FROM users
+        WHERE isadmin = 0 AND (
+           LOWER(id) LIKE ?
+           OR LOWER(username) LIKE ?
+           OR LOWER(firstname) LIKE ?
+           OR LOWER(lastname) LIKE ?
+           OR LOWER(registrationdate) LIKE ?
+        )
+    """
+
+    superadmin_query = """
+        SELECT 'user' as type, id, username, password, role, firstname, lastname, registrationdate, isadmin
+        FROM users
+        WHERE (
+            LOWER(id) LIKE ?
+            OR LOWER(username) LIKE ?
+            OR LOWER(firstname) LIKE ?
+            OR LOWER(lastname) LIKE ?
+            OR LOWER(registrationdate) LIKE ?
+        )
+    """
+    
 
     results = cursor.execute(member_query, [search_key] * 6).fetchall()
 
-    if include_users:
-        user_results = cursor.execute(user_query, [search_key] * 5).fetchall()
-    else:
-        user_results = cursor.execute(user_query, [search_key] * 5).fetchall()
+    if role == 1:
+        user_results = cursor.execute(admin_query, [search_key] * 5).fetchall()
+        results.extend(user_results)
 
-    results.extend(user_results)
+    if role == 2:
+        user_results = cursor.execute(superadmin_query, [search_key] * 5).fetchall()
+        results.extend(user_results)
+
     cursor.close()
-
 
     members = [Member.fromtuple(row[1:]) for row in results if row[0] == 'member']
     users = [User.fromtuple(row[1:]) for row in results if row[0] == 'user']
