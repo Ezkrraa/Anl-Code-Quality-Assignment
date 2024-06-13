@@ -232,7 +232,7 @@ def show_members(user: db.User) -> None:
         members = db.get_all_members()
         options.extend(
             [
-                f"[{(1 + i):02}] {members[i].firstname} {members[i].lastname}"
+                f"{members[i].firstname} {members[i].lastname}"
                 for i in range(len(members))
             ]
         )
@@ -454,7 +454,12 @@ def super_admin_menu():
         True,
     )
     while True:
-        su_admin_options = ["Logout", "Search members", "Show members", "Show admins and consultants"]
+        su_admin_options = [
+            "Logout",
+            "Search members",
+            "Show members",
+            "Show admins and consultants",
+        ]
         selection, index = pick(
             su_admin_options,
             title=f"{logo}\nSUPER ADMIN - MAIN MENU\nWelcome, super admin!",
@@ -538,14 +543,18 @@ def show_search_menu(currentUser: db.User, search_key: str, role: int = 0):
     while True:
         clear_console()
         # Perform search based on search_key
-        results: list[Union[db.Member, db.User]] = db.search_members_and_users(search_key, role)
+        results: list[Union[db.Member, db.User]] = db.search_members_and_users(
+            search_key, role
+        )
 
         options = ["Return to main menu"]
         for i, result in enumerate(results):
             if isinstance(result, db.Member):
-                options.append(f"[{i:02}] Member: {result.firstname} {result.lastname} - ID: {result.id}")
+                options.append(
+                    f"Member: {result.firstname} {result.lastname} - ID: {result.id}"
+                )
             elif isinstance(result, db.User):
-                options.append(f"[{i:02}] User: {result.username}")
+                options.append(f"User: {result.username}")
 
         # Display the menu and get the user's selection
         selection, index = pick(options, title=f"{logo}\nSearch Results")

@@ -72,9 +72,7 @@ if __name__ == "__main__":
 # NEW FEATURES:
 
 ## General:
-#   - verify if password follows rules
 #   - encrypt sensitive data in DB
-#   - usernames must follow username rules
 
 ## Consultant (user):
 #   - update own password
