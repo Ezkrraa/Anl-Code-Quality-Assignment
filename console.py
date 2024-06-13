@@ -6,8 +6,7 @@ from typing import cast, Union
 # for clearing the console
 import platform, os
 
-import pick
-from pick import pick  # TODO: write own
+from pick import pick
 import db
 import bcrypt
 import datetime
@@ -524,7 +523,11 @@ def home_screen() -> None:
             "Exit",
             "Login",
         ]
-        _, num = pick(options, title=f"{logo}\nMain menu\nIn this application, use ↑ and ↓ to select, and [Enter] to confirm.",indicator=">")
+        _, num = pick(
+            options,
+            title=f"{logo}\nMain menu\nIn this application, use ↑ and ↓ to select, and [Enter] to confirm.",
+            indicator=">",
+        )
         match num:
             case 0:
                 return
@@ -550,7 +553,7 @@ def show_search_menu(currentUser: db.User, search_key: str, role: int = 0):
                 options.append(f"User: {result.username}")
 
         # Display the menu and get the user's selection
-        selection, index = pick(options, title=f"{logo}\nSearch Results",indicator=">")
+        selection, index = pick(options, title=f"{logo}\nSearch Results", indicator=">")
         if index == 0:
             return
         else:
