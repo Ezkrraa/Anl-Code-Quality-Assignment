@@ -1,9 +1,8 @@
 # import my own files
 import db
 import console
-from uuid import uuid4
+
 import sys
-import random
 
 if __name__ == "__main__":
     if sys.argv.__contains__("--no-clear"):

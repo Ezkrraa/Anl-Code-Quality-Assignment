@@ -1,13 +1,13 @@
-# uuid v4, since it's unique and random
+# uuid v4, since it's unique and random, use UUID class for type hints
 from uuid import uuid4, UUID
 
 # typing is in python STD lib
 from typing import cast
 
-# for database, hashing, logging and random data
+# for hashing, database, timestamps
 import bcrypt, sqlite3, datetime
 
-# for seeding, testing purposes
+# for seeding and testing purposes
 from faker import Faker
 
 # random, duhh
@@ -85,7 +85,7 @@ class User:
     def genRandom(cls):
         username = fake.first_name() + str(rand.randint(1000, 9999))
         password = bcrypt.hashpw("password123".encode("utf-8"), bcrypt.gensalt())
-        role = "user"
+        role = "Consultant"
         firstname = fake.first_name()
         lastname = fake.last_name()
         registrationdate = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -211,6 +211,9 @@ class Member:
 
     def __str__(self) -> str:
         return f"ID: {self.id}\nName: {self.firstname} {self.lastname}\nAge: {self.age}\nGender: {self.gender}\nWeight: {self.weight}\nAddress: {self.address}\nEmail: {self.email}\nPhone number: {self.phonenumber}\nRegistration Date: {self.registrationdate}"
+
+    def fullname(self) -> str:
+        return f"{self.firstname} {self.lastname}"
 
 
 def setup_database() -> None:
@@ -534,7 +537,6 @@ def search_members_and_users(search_key: str, role: int) -> list:
             OR LOWER(registrationdate) LIKE ?
         )
     """
-    
 
     results = cursor.execute(member_query, [search_key] * 6).fetchall()
 
@@ -548,8 +550,8 @@ def search_members_and_users(search_key: str, role: int) -> list:
 
     cursor.close()
 
-    members = [Member.fromtuple(row[1:]) for row in results if row[0] == 'member']
-    users = [User.fromtuple(row[1:]) for row in results if row[0] == 'user']
+    members = [Member.fromtuple(row[1:]) for row in results if row[0] == "member"]
+    users = [User.fromtuple(row[1:]) for row in results if row[0] == "user"]
 
     return members + users
 

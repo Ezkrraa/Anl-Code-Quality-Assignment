@@ -338,7 +338,6 @@ def show_users(currentUser: db.User) -> None:
     while True:
         users: list[db.User] = db.get_all_users(currentUser.isadmin)
         options = ["Return to main menu"]
-        # input(users)
         options.extend([f"{users[i].username}" for i in range(len(users))])
         selection, index = pick(options, title=f"{logo}\nUser menu", indicator=">")
         match index:
@@ -378,6 +377,7 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
 
 
 def edit_user(currentUser: db.User, usr: db.User) -> None:
+    select: int = 0
     while True:
         options = [
             "Return without saving",
@@ -386,7 +386,10 @@ def edit_user(currentUser: db.User, usr: db.User) -> None:
             f"Is {'an' if usr.isadmin else 'not an'} admin",
         ]
         result, index = pick(
-            options=options, title=f"{logo}Edit member info:", indicator=">"
+            options=options,
+            title=f"{logo}Edit member info:",
+            indicator=">",
+            default_index=select,
         )
         match index:
             case 0:
@@ -409,6 +412,7 @@ def edit_user(currentUser: db.User, usr: db.User) -> None:
                     print("No distinguish between lowercase or uppercase letters")
                     usr.username = input("Enter Username: ")
             case 3:
+                select = 3
                 usr.isadmin = not usr.isadmin
 
 
@@ -538,21 +542,23 @@ def home_screen() -> None:
 def show_search_menu(currentUser: db.User, search_key: str, role: int = 0):
     while True:
         clear_console()
-        # Perform search based on search_key
+        # search by search_key
         results: list[Union[db.Member, db.User]] = db.search_members_and_users(
             search_key, role
         )
-
+        # TODO: add admins separately
         options = ["Return to main menu"]
+        max_len: int = get_max(results)
         for i, result in enumerate(results):
             if isinstance(result, db.Member):
                 options.append(
-                    f"Member: {result.firstname} {result.lastname} - ID: {result.id}"
+                    f"Member: {result.fullname()}{' ' * (max_len - len(f'Member: {result.fullname()}'))} - ID: {result.id}"
                 )
             elif isinstance(result, db.User):
-                options.append(f"{result.role}: {result.username} - {result.firstname} {result.lastname}")
+                options.append(
+                    f"{result.role.title()}: {result.username}{' ' * (max_len - len(f'{result.role}: {result.username}'))} - {result.firstname} {result.lastname}"
+                )  # TODO: add padding
 
-        # Display the menu and get the user's selection
         selection, index = pick(options, title=f"{logo}\nSearch Results", indicator=">")
         if index == 0:
             return
@@ -562,3 +568,13 @@ def show_search_menu(currentUser: db.User, search_key: str, role: int = 0):
                 show_member(currentUser, selected_result)
             elif isinstance(selected_result, db.User):
                 show_user(currentUser, selected_result)
+
+
+def get_max(lst: list[Union[db.User, db.Member]]) -> int:
+    max_len = 0
+    for obj in lst:
+        if isinstance(obj, db.Member):
+            max_len = max(len(f"Member: {obj.fullname()}"), max_len)
+        elif isinstance(obj, db.User):
+            max_len = max(max_len, len(f"{obj.role}: {obj.username}"))
+    return max_len
