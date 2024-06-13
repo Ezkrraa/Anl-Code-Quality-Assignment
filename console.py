@@ -75,9 +75,8 @@ def user_menu(usr: db.User):
                 break
             case 1:
                 clear_console()
-                members = db.get_all_members()
                 query = input("Search for a member:")
-                # TODO: add search function
+                show_search_menu(usr, query)
             case 2:
                 add_member()
                 show_message("Member added successfully.")
@@ -422,6 +421,7 @@ def admin_menu(admin: db.User):
         show_logo()
         admin_options = [
             "Logout",
+            "Search members",
             "Show members",
             "Show consultants",
             "Add Consultant",
@@ -436,12 +436,16 @@ def admin_menu(admin: db.User):
                 show_message("Logging out now.")
                 break
             case 1:
-                show_members(admin)
+                clear_console()
+                query = input("Search for a member:")
+                show_search_menu(admin, query)
             case 2:
-                show_users(admin)
+                show_members(admin)
             case 3:
-                add_consultant()
+                show_users(admin)
             case 4:
+                add_consultant()
+            case 5:
                 change_password(admin)
                 show_message("Changed password successfully.")
             case _:
@@ -459,25 +463,22 @@ def super_admin_menu():
         True,
     )
     while True:
-        su_admin_options = ["Logout", "Show members", "Show admins and consultants"]
+        su_admin_options = ["Logout", "Search members", "Show members", "Show admins and consultants"]
         selection, index = pick(
             su_admin_options,
             title=f"{logo}\nSUPER ADMIN - MAIN MENU\nWelcome, super admin!",
         )
         match index:
             case 0:
-                query = input("Search for a member:")
-                show_search_menu(super_admin, query, isSuperAdmin=True)
-            case 1:
-                show_members(super_admin)
-            case 2:
-                show_users(super_admin)
-            case 3:
                 show_message("Logging out now.")
                 break
             case 1:
-                show_members(super_admin)
+                clear_console()
+                query = input("Search for a member:")
+                show_search_menu(super_admin, query, isSuperAdmin=True)
             case 2:
+                show_members(super_admin)
+            case 3:
                 show_users(super_admin)
             case _:
                 show_message("Invalid option.")
