@@ -550,7 +550,7 @@ def show_search_menu(currentUser: db.User, search_key: str, role: int = 0):
                     f"Member: {result.firstname} {result.lastname} - ID: {result.id}"
                 )
             elif isinstance(result, db.User):
-                options.append(f"User: {result.username}")
+                options.append(f"User: {result.username} - {result.firstname} {result.lastname}")
 
         # Display the menu and get the user's selection
         selection, index = pick(options, title=f"{logo}\nSearch Results", indicator=">")
