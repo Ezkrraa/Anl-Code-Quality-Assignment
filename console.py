@@ -5,7 +5,8 @@ from typing import cast
 
 # for clearing the console
 import platform, os
-from pick import pick  # TODO: write own
+
+# from pick import pick  # TODO: write own
 import db
 import bcrypt
 import datetime
@@ -67,7 +68,6 @@ def user_menu(usr: db.User):
         selection, index = pick(
             user_options,
             title=f"{logo}\nConsultant - MAIN MENU\nWelcome, {usr.username}!",
-            indicator=">",
         )
         match index:
             case 0:
@@ -167,7 +167,7 @@ def show_members(user: db.User) -> None:
                 for i in range(len(members))
             ]
         )
-        selection, index = pick(options, indicator=">", title=f"{logo}\nMember menu")
+        selection, index = pick(options, title=f"{logo}\nMember menu")
         match index:
             case 0:
                 return
@@ -180,9 +180,7 @@ def show_member(user: db.User, member: db.Member) -> None:
         options = ["Return to user menu", "Edit information"]
         if user.isadmin:
             options.append("Delete member")
-        result, index = pick(
-            options=options, indicator=">", title=f"{logo}Member Info:\n{member}"
-        )
+        result, index = pick(options=options, title=f"{logo}Member Info:\n{member}")
         match index:
             case 0:
                 return
@@ -193,7 +191,6 @@ def show_member(user: db.User, member: db.Member) -> None:
                 _, index = pick(
                     options=confirm_options,
                     title=f"Are you sure you want to delete {member.firstname} {member.lastname}'s account?",
-                    indicator="> ",
                 )
                 match index:
                     case 0:
@@ -223,9 +220,7 @@ def edit_member(member: db.Member):
             f"Email: {member.email}",
             f"Phone number: {member.phonenumber}",
         ]
-        result, index = pick(
-            options=options, indicator=">", title=f"{logo}Edit member info:"
-        )
+        result, index = pick(options=options, title=f"{logo}Edit member info:")
         match index:
             case 0:
                 break
@@ -271,7 +266,7 @@ def show_users(currentUser: db.User) -> None:
         options = ["Return to main menu"]
         # input(users)
         options.extend([f"[{i:02}] {users[i].username}" for i in range(len(users))])
-        selection, index = pick(options, indicator=">", title=f"{logo}\nUser menu")
+        selection, index = pick(options, title=f"{logo}\nUser menu")
         match index:
             case 0:
                 return
@@ -283,7 +278,8 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
     while True:
         options = ["Return", "Edit information", "Delete user"]
         result, index = pick(
-            options=options, title=f"{logo}User Info:\n{usr}", indicator=">"
+            options=options,
+            title=f"{logo}User Info:\n{usr}",
         )
         match index:
             case 0:
@@ -295,7 +291,6 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
                 _, index = pick(
                     options=confirm_options,
                     title=f"Are you sure you want to delete {usr.username}'s account?",
-                    indicator="> ",
                 )
                 match index:
                     case 0:
@@ -317,9 +312,7 @@ def edit_user(currentUser: db.User, usr: db.User) -> None:
             f"Username: {usr.username}",
             f"Is {'an' if usr.isadmin else 'not an'} admin",
         ]
-        result, index = pick(
-            options=options, indicator=">", title=f"{logo}Edit member info:"
-        )
+        result, index = pick(options=options, title=f"{logo}Edit member info:")
         match index:
             case 0:
                 break
@@ -354,7 +347,6 @@ def admin_menu(admin: db.User):
         selection, index = pick(
             admin_options,
             title=f"{logo}\nADMIN - MAIN MENU\nWelcome, {admin.username}!",
-            indicator=">",
         )
         match index:
             case 0:
@@ -387,7 +379,6 @@ def super_admin_menu():
         selection, index = pick(
             su_admin_options,
             title=f"{logo}\nSUPER ADMIN - MAIN MENU\nWelcome, super admin!",
-            indicator=">",
         )
         match index:
             case 0:
@@ -402,27 +393,55 @@ def super_admin_menu():
                 continue
 
 
-def login_screen():
-    while True:
+def login_screen() -> None:
+    fails = 0
+    while fails < 3:
         clear_console()
         show_logo()
-        print(
-            "LOGIN SCREEN\nTo login to the application, enter your username:\n> ",
-            end="",
-        )
-        uname = input()
+        print("LOGIN SCREEN\nTo login to the application, enter your username:")
+        uname = input("> ")
         print("enter password:")
         unhashed_pw = getpass("> ")
         attempt = db.attempt_login(uname=uname, attemptPassword=unhashed_pw)
         match (attempt):
             case e if isinstance(e, db.User):
                 to_main_menu(cast(db.User, attempt))
-
+                return
             case e if isinstance(e, Exception) and (
                 str(attempt) == "UserNotFound" or str(attempt) == "WrongPassword"
             ):
                 show_message(f"No user found with that username and password.")
+                fails += 1
             case e if isinstance(e, Exception) and str(attempt) == "SuperAdmin":
                 super_admin_menu()
+                return
             case e if isinstance(e, Exception):
                 show_message(str(attempt))
+    show_message("Failed to login thrice, returning to main menu")
+
+
+def home_screen() -> None:
+    while True:
+        clear_console()
+        options = ["Login", "Exit"]
+        _, num = pick(options, title=f"{logo}\nMain menu")
+        match num:
+            case 0:
+                login_screen()
+            case 1:
+                return
+
+
+def pick(options: list[str], title: str = "") -> tuple[str, int]:
+    while True:
+        clear_console()
+        print(title)
+        for i in range(len(options)):
+            print(f"[{i:02}] {options[i]}")
+        try:
+            selection = int(input("Select an option"))
+            if 0 < selection < len(options):
+                return (options[selection], selection)
+        except TypeError:
+            show_message("Incorrect number format.")
+            continue
