@@ -149,7 +149,7 @@ def add_member():
 
 def add_consultant():
     while True:
-        username = input("Enter Username: ")
+        username = input("Enter Username: ").lower()
         while not re.match(r"^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", username):
             print("Invalid Username. Please enter again.")
             print("Username must be unique and have a length of at least 8 characters")
@@ -161,15 +161,15 @@ def add_consultant():
             print("No distinguish between lowercase or uppercase letters")
             username = input("Enter Username: ")
 
-        first_name = input("Enter First Name: ")
+        first_name = input("Enter First Name: ").title()
         while not re.match("^[A-Za-z]*$", first_name):
             print("Invalid First Name. Please enter again.")
-            first_name = input("Enter First Name: ")
+            first_name = input("Enter First Name: ").title()
 
-        last_name = input("Enter Last Name: ")
+        last_name = input("Enter Last Name: ").title()
         while not re.match("^[A-Za-z]*$", last_name):
             print("Invalid Last Name. Please enter again.")
-            last_name = input("Enter Last Name: ")
+            last_name = input("Enter Last Name: ").title()
 
         temp_pw = f"TempPassword-{str(hex(rand.getrandbits(32))[2:])}"
         new_consultant = db.User(
