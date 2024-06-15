@@ -83,7 +83,7 @@ class User:
 
     @classmethod
     def genRandom(cls):
-        username = fake.first_name() + str(rand.randint(1000, 9999))
+        username = (fake.first_name() + str(rand.randint(1000, 9999))).lower()
         password = bcrypt.hashpw("password123".encode("utf-8"), bcrypt.gensalt())
         role = "Consultant"
         firstname = fake.first_name()
@@ -114,7 +114,11 @@ class User:
         )
 
     def __str__(self) -> str:
-        return f"Name: {self.username}\nRole: {self.role}\nIs admin: {self.isadmin}\nFull name: {self.firstname} {self.lastname}\nRegistration Date: {self.registrationdate}"
+        return f"Name: {self.username}\n\
+            Role: {self.role}\n\
+            Is admin: {self.isadmin}\n\
+            Full name: {self.firstname} {self.lastname}\n\
+            Registration Date: {self.registrationdate}"
 
 
 class Member:
@@ -130,17 +134,7 @@ class Member:
     registrationdate: str
 
     def __init__(
-        self,
-        fname,
-        lname,
-        age,
-        gender,
-        weight,
-        addr,
-        email,
-        phone,
-        regdate,
-        id="0",
+        self, fname, lname, age, gender, weight, addr, email, phone, regdate, id="0"
     ) -> None:
         if id == "0":
             self.id = gen_memberid()
@@ -179,7 +173,7 @@ class Member:
         age = rand.randint(20, 80)
         gender = rand.choice(["F", "F", "M", "M", "O"])
         weight = rand.randint(50, 110)
-        address = fake.address().replace("\n", " ")
+        address = fake.address().replace("\n", "")
         email = fake.email()
         phonenumber = str(rand.randint(10000000, 99999999))
         registrationdate = str(datetime.datetime.now().date().today())
@@ -210,7 +204,16 @@ class Member:
         )
 
     def __str__(self) -> str:
-        return f"ID: {self.id}\nName: {self.firstname} {self.lastname}\nAge: {self.age}\nGender: {self.gender}\nWeight: {self.weight}\nAddress: {self.address}\nEmail: {self.email}\nPhone number: {self.phonenumber}\nRegistration Date: {self.registrationdate}"
+        return f"\
+            ID: {self.id}\n\
+            Name: {self.firstname} {self.lastname}\n\
+            Age: {self.age}\n\
+            Gender: {self.gender}\n\
+            Weight: {self.weight}\n\
+            Address: {self.address}\n\
+            Email: {self.email}\n\
+            Phone number: {self.phonenumber}\n\
+            Registration Date: {self.registrationdate}"
 
     def fullname(self) -> str:
         return f"{self.firstname} {self.lastname}"

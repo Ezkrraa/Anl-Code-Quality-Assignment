@@ -67,11 +67,12 @@ if __name__ == "__main__":
 ## TODO:
 # FIXES:
 #   - fix changing username
-#   - fix logo
+#   - exclude self in "show consultants"
 # NEW FEATURES:
 
 ## General:
 #   - encrypt sensitive data in DB
+#   - encrypt logs
 
 ## Consultant (user):
 #   - update own password
