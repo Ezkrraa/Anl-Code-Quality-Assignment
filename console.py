@@ -12,6 +12,7 @@ import bcrypt
 import datetime
 import re
 import random
+import copy
 
 rand = random
 noclear: bool = False
@@ -81,7 +82,7 @@ def user_menu(usr: db.User):
                 query = input("Search for a member:")
                 show_search_menu(usr, query)
             case 2:
-                add_member()
+                add_member(usr)
                 show_message("Member added successfully.")
             case 3:
                 show_members(usr)
@@ -90,7 +91,7 @@ def user_menu(usr: db.User):
                 show_message("Password changed successfully.")
 
 
-def add_member():
+def add_member(user: db.User):
     while True:
         firstname = input("Enter First Name: ")
         while not re.match("^[A-Za-z]*$", firstname):
@@ -143,11 +144,11 @@ def add_member():
             datetime.date.today(),
             db.gen_memberid(),
         )
-        db.create_member(new_member)
+        db.create_member(user, new_member)
         break
 
 
-def add_consultant():
+def add_user(admin: db.User, make_admin: bool = False):
     while True:
         username = input("Enter Username: ").lower()
         while not re.match(r"^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", username):
@@ -155,9 +156,7 @@ def add_consultant():
             print("Username must be unique and have a length of at least 8 characters")
             print("Must be no longer than 10 characters")
             print("Must be started with a letter or underscores (_)")
-            print(
-                "Can contain letters (a-z), numbers (0-9), underscores (_), apostrophes ('), and periods (.)"
-            )
+            print("Can contain letters (a-z), numbers (0-9), underscores (_), apostrophes ('), and periods (.)")
             print("No distinguish between lowercase or uppercase letters")
             username = input("Enter Username: ")
 
@@ -182,14 +181,15 @@ def add_consultant():
             fname=first_name,
             lname=last_name,
             regdate=datetime.date.today(),
-            isadmin=False,
+            isadmin=make_admin,
         )
-        db.create_user(new_consultant)
-        show_message(f"Created user with the password {temp_pw}.")
+        db.create_user(admin, new_consultant)
+        show_message(f"Created {'admin' if make_admin else 'consultant'} with the password {temp_pw}.")
         break
 
 
 def change_password(usr: db.User):
+    old_user = copy.deepcopy(usr)
     while True:
         clear_console()
         show_logo()
@@ -207,12 +207,8 @@ def change_password(usr: db.User):
             print("Invalid Password. Please enter again.")
             print("Password must have a length of at least 12 characters")
             print("Must be no longer than 30 characters")
-            print(
-                "Can contain letters (a-z), (A-Z), numbers (0-9), Special characters such as ~!@#$%&_-+=`|\\(){}[]:;'<>,.?/"
-            )
-            print(
-                "Must have a combination of at least one lowercase letter, one uppercase letter, one digit, and one special character"
-            )
+            print("Can contain letters (a-z), (A-Z), numbers (0-9), Special characters such as ~!@#$%&_-+=`|\\(){}[]:;'<>,.?/")
+            print("Must have a combination of at least one lowercase letter, one uppercase letter, one digit, and one special character")
             new_pw = getpass("> ")
         print("Confirm your new password:")
         confirm_pw = getpass("> ")
@@ -221,7 +217,7 @@ def change_password(usr: db.User):
             continue
         new_crypt_pw = bcrypt.hashpw(new_pw.encode("utf-8"), bcrypt.gensalt())
         usr.password = new_crypt_pw
-        db.edit_user(usr)
+        db.edit_user(usr, usr, old_user)
         show_message("Password changed successfully.")
         break
 
@@ -230,13 +226,8 @@ def show_members(user: db.User) -> None:
     while True:
         clear_console()
         options = ["Return"]
-        members = db.get_all_members()
-        options.extend(
-            [
-                f"{members[i].firstname} {members[i].lastname}"
-                for i in range(len(members))
-            ]
-        )
+        members = db.get_all_members(user)
+        options.extend([f"{members[i].firstname} {members[i].lastname}" for i in range(len(members))])
         selection, index = pick(options, title=f"{logo}\nMember menu", indicator=">")
         match index:
             case 0:
@@ -250,14 +241,12 @@ def show_member(user: db.User, member: db.Member) -> None:
         options = ["Return to user menu", "Edit information"]
         if user.isadmin:
             options.append("Delete member")
-        result, index = pick(
-            options=options, title=f"{logo}Member Info:\n{member}", indicator=">"
-        )
+        result, index = pick(options=options, title=f"{logo}Member Info:\n{member}", indicator=">")
         match index:
             case 0:
                 return
             case 1:
-                edit_member(member)
+                edit_member(user, member)
             case 2 if user.isadmin:
                 confirm_options = ["No", "Yes"]
                 _, index = pick(
@@ -266,19 +255,15 @@ def show_member(user: db.User, member: db.Member) -> None:
                 )
                 match index:
                     case 0:
-                        show_message(
-                            f"Not deleting {member.firstname} {member.lastname}'s account."
-                        )
+                        show_message(f"Not deleting {member.firstname} {member.lastname}'s account.")
                         continue
                     case 1:
                         db.delete_member(user, member)
-                        show_message(
-                            f"Successfully deleted {member.firstname} {member.lastname}'s account."
-                        )
+                        show_message(f"Successfully deleted {member.firstname} {member.lastname}'s account.")
                         return
 
 
-def edit_member(member: db.Member):
+def edit_member(user: db.User, member: db.Member):
     while True:
         options = [
             "Return without saving",
@@ -292,19 +277,15 @@ def edit_member(member: db.Member):
             f"Email: {member.email}",
             f"Phone number: {member.phonenumber}",
         ]
-        result, index = pick(
-            options=options, title=f"{logo}Edit member info:", indicator=">"
-        )
+        result, index = pick(options=options, title=f"{logo}Edit member info:", indicator=">")
         match index:
             case 0:
                 break
             case 1:
-                db.edit_member(member)
+                db.edit_member(user, member)
                 break
             case _:
-                member = change_member(
-                    cast(int, index) - 2, member, input("Enter new value:")
-                )
+                member = change_member(cast(int, index) - 2, member, input("Enter new value:"))
 
 
 def change_member(index: int, member: db.Member, new_value: str) -> db.Member:
@@ -336,7 +317,7 @@ def change_member(index: int, member: db.Member, new_value: str) -> db.Member:
 
 def show_users(currentUser: db.User) -> None:
     while True:
-        users: list[db.User] = db.get_all_users(currentUser.isadmin)
+        users: list[db.User] = db.get_all_users(currentUser)
         options = ["Return to main menu"]
         options.extend([f"{users[i].username}" for i in range(len(users))])
         selection, index = pick(options, title=f"{logo}\nUser menu", indicator=">")
@@ -350,9 +331,7 @@ def show_users(currentUser: db.User) -> None:
 def show_user(currentUser: db.User, usr: db.User) -> None:
     while True:
         options = ["Return", "Edit information", "Delete user"]
-        result, index = pick(
-            options=options, title=f"{logo}User Info:\n{usr}", indicator=">"
-        )
+        result, index = pick(options=options, title=f"{logo}User Info:\n{usr}", indicator=">")
         match index:
             case 0:
                 break
@@ -376,15 +355,17 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
                 continue
 
 
-def edit_user(currentUser: db.User, usr: db.User) -> None:
+def edit_user(currentUser: db.User, user: db.User) -> None:
     select: int = 0
+    old_user = copy.deepcopy(user)
     while True:
         options = [
             "Return without saving",
             "Return and save",
-            f"Username: {usr.username}",
-            f"Is {'an' if usr.isadmin else 'not an'} admin",
+            f"Username: {user.username}",
         ]
+        if currentUser.username == "super_admin":
+            options.extend(f"Is {'an' if user.isadmin else 'not an'} admin")
         result, index = pick(
             options=options,
             title=f"{logo}Edit member info:",
@@ -395,25 +376,21 @@ def edit_user(currentUser: db.User, usr: db.User) -> None:
             case 0:
                 break
             case 1:
-                db.edit_user(usr)
+                db.edit_user(currentUser, user, old_user)
                 break
             case 2:
-                usr.username = input("Enter Username: ")
-                while not re.match(r"^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", usr.username):
+                user.username = input("Enter Username: ")
+                while not re.match(r"^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", user.username):
                     print("Invalid Username. Please enter again.")
-                    print(
-                        "Username must be unique and have a length of at least 8 characters"
-                    )
+                    print("Username must be unique and have a length of at least 8 characters")
                     print("Must be no longer than 10 characters")
                     print("Must be started with a letter or underscores (_)")
-                    print(
-                        "Can contain letters (a-z), numbers (0-9), underscores (_), apostrophes ('), and periods (.)"
-                    )
+                    print("Can contain letters (a-z), numbers (0-9), underscores (_), apostrophes ('), and periods (.)")
                     print("No distinguish between lowercase or uppercase letters")
-                    usr.username = input("Enter Username: ")
-            case 3:
+                    user.username = input("Enter Username: ")
+            case 3 if currentUser.username == "super_admin":
                 select = 3
-                usr.isadmin = not usr.isadmin
+                user.isadmin = not user.isadmin
 
 
 def admin_menu(admin: db.User):
@@ -425,8 +402,8 @@ def admin_menu(admin: db.User):
             "Search members",
             "Show members",
             "Show consultants",
-            "Add Consultant",
-            "Change Password",
+            "Add consultant",
+            "Change password",
         ]
         selection, index = pick(
             admin_options,
@@ -446,7 +423,7 @@ def admin_menu(admin: db.User):
             case 3:
                 show_users(admin)
             case 4:
-                add_consultant()
+                add_user(admin, False)
             case 5:
                 change_password(admin)
                 show_message("Changed password successfully.")
@@ -465,12 +442,7 @@ def super_admin_menu():
         True,
     )
     while True:
-        su_admin_options = [
-            "Logout",
-            "Search members",
-            "Show members",
-            "Show admins and consultants",
-        ]
+        su_admin_options = ["Logout", "Search members", "Show members", "Show admins and consultants", "Add a consultant", "Add an admin"]
         selection, index = pick(
             su_admin_options,
             title=f"{logo}\nSUPER ADMIN - MAIN MENU\nWelcome, super admin!",
@@ -488,6 +460,12 @@ def super_admin_menu():
                 show_members(super_admin)
             case 3:
                 show_users(super_admin)
+            case 4:
+                add_member(super_admin)
+            case 5:
+                add_user(super_admin, False)
+            case 6:
+                add_user(super_admin, True)
             case _:
                 show_message("Invalid option.")
                 continue
@@ -507,9 +485,7 @@ def login_screen() -> None:
             case e if isinstance(e, db.User):
                 to_main_menu(cast(db.User, attempt))
                 return
-            case e if isinstance(e, Exception) and (
-                str(attempt) == "UserNotFound" or str(attempt) == "WrongPassword"
-            ):
+            case e if isinstance(e, Exception) and (str(attempt) == "UserNotFound" or str(attempt) == "WrongPassword"):
                 show_message(f"No user found with that username and password.")
                 fails += 1
             case e if isinstance(e, Exception) and str(attempt) == "SuperAdmin":
@@ -543,17 +519,13 @@ def show_search_menu(currentUser: db.User, search_key: str, role: int = 0):
     while True:
         clear_console()
         # search by search_key
-        results: list[Union[db.Member, db.User]] = db.search_members_and_users(
-            search_key, role
-        )
+        results: list[Union[db.Member, db.User]] = db.search_members_and_users(currentUser, search_key)
         # TODO: add admins separately
         options = ["Return to main menu"]
         max_len: int = get_max(results)
         for i, result in enumerate(results):
             if isinstance(result, db.Member):
-                options.append(
-                    f"Member: {result.fullname()}{' ' * (max_len - len(f'Member: {result.fullname()}'))} - ID: {result.id}"
-                )
+                options.append(f"Member: {result.fullname()}{' ' * (max_len - len(f'Member: {result.fullname()}'))} - ID: {result.id}")
             elif isinstance(result, db.User):
                 options.append(
                     f"{result.role.title()}: {result.username}{' ' * (max_len - len(f'{result.role}: {result.username}'))} - {result.firstname} {result.lastname}"

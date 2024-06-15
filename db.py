@@ -77,9 +77,7 @@ class User:
 
     @classmethod
     def fromtuple(cls, data: tuple[bytes, str, bytes, str, str, str, str, bool]):
-        return cls(
-            data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[0]
-        )
+        return cls(data[1], data[2], data[3], data[4], data[5], data[6], bool(data[7]), data[0])
 
     @classmethod
     def genRandom(cls):
@@ -116,9 +114,23 @@ class User:
     def __str__(self) -> str:
         return f"Name: {self.username}\n\
             Role: {self.role}\n\
-            Is admin: {self.isadmin}\n\
+            Is {'' if self.isadmin else 'not '}an admin\n\
             Full name: {self.firstname} {self.lastname}\n\
             Registration Date: {self.registrationdate}"
+
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, User):
+            return False
+        return (
+            self.id == value.id
+            and self.username == value.username
+            and self.password == value.password
+            and self.role == value.role
+            and self.firstname == value.firstname
+            and self.lastname == value.lastname
+            and self.registrationdate == value.registrationdate
+            and self.isadmin == value.isadmin
+        )
 
 
 class Member:
@@ -133,9 +145,7 @@ class Member:
     phonenumber: str
     registrationdate: str
 
-    def __init__(
-        self, fname, lname, age, gender, weight, addr, email, phone, regdate, id="0"
-    ) -> None:
+    def __init__(self, fname, lname, age, gender, weight, addr, email, phone, regdate, id="0") -> None:
         if id == "0":
             self.id = gen_memberid()
         else:
@@ -279,9 +289,7 @@ def create_tables():
         cursor.close()
         database_connection.commit()
     except sqlite3.Error as e:
-        write_log_short(
-            4, "Seeding error", f"Tried to seed database, but ran into error {e}"
-        )
+        write_log_short(4, "Seeding error", f"Tried to seed database, but ran into error {e}")
 
 
 def create_test_admin():
@@ -343,16 +351,12 @@ def create_test_admin():
 def seed_database():
     cursor = database_connection.cursor()
     seed_members = [Member.genrandom().toTuple() for _ in range(50)]
-    cursor.executemany(
-        "INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", seed_members
-    )
+    cursor.executemany("INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", seed_members)
     seed_users = [User.genRandom().toTuple() for _ in range(20)]
     cursor.executemany("INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)", seed_users)
     cursor.close()
     database_connection.commit()
-    write_log_short(
-        6, "Seeded successfully", "Successfully seeded members and users tables"
-    )
+    write_log_short(6, "Seeded successfully", "Successfully seeded members and users tables")
     create_test_admin()
 
 
@@ -367,9 +371,7 @@ def gen_memberid() -> str:
             total += int(new_id[i])
         new_id += str(total % 10)
         cur = database_connection.cursor()
-        anymembers = cur.execute(
-            "SELECT * FROM members WHERE id=?", (new_id,)
-        ).fetchone()
+        anymembers = cur.execute("SELECT * FROM members WHERE id=?", (new_id,)).fetchone()
         if anymembers is None:
             return new_id
 
@@ -394,14 +396,22 @@ def gen_memberid() -> str:
 #     write_log_short(6, f"{admin.username} unlocked {usr.username}'s account.")
 
 
-def edit_member(member: Member):
+# any user can edit members
+def edit_member(user: User, member: Member):
+    if not is_valid_user(user):
+        write_log_short(4, "Someone tried to edit a member without privileges", f"Someone attempted to edit a member without being a valid user. User details: {user}", True)
+        return
     cur = database_connection.cursor()
     cur.execute("REPLACE INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.toTuple())
     cur.close()
     database_connection.commit()
 
 
-def delete_member(user: User, member: Member) -> bool:
+# only admins and above can delete members
+def delete_member(admin: User, member: Member) -> bool:
+    if not (is_valid_user(admin) and admin.isadmin):
+        write_log_short(4, "Someone tried to delete a member without privileges", f"Someone attempted to delete a member without being a valid admin. User details: {admin}", True)
+        return False
     try:
         cur = database_connection.cursor()
         cur.execute("DELETE FROM members WHERE id=?", (member.id,))
@@ -410,7 +420,7 @@ def delete_member(user: User, member: Member) -> bool:
         write_log_short(
             6,
             "Deleted account",
-            f"{user.username} deleted the account of {member.firstname} {member.lastname}.",
+            f"{admin.username} deleted the account of {member.firstname} {member.lastname}.",
         )
         return True
     except Exception as e:
@@ -422,26 +432,105 @@ def delete_member(user: User, member: Member) -> bool:
         return False
 
 
-def edit_user(usr: User):
+# only admins and above may edit users
+def edit_user(admin: User, new_user: User, old_user: User):
+    if not is_valid_user(old_user) or new_user.id != old_user.id:
+        write_log_short(
+            5,
+            "Someone tried to edit a user that doesn't exist",
+            f"Someone attempted to edit a user that does not exist. User details: {admin}, Invalid user details: {old_user}",
+            True,
+        )
+        return
+    # bypass admin check if 'admin' isn't an admin but a user is only editing password, firstname or lastname (for changing passwords)
+    if (
+        is_valid_user(admin)
+        and admin.id == new_user.id
+        and admin.username == new_user.username
+        and admin.isadmin == new_user.isadmin
+        and admin.role == new_user.role
+        and admin.registrationdate == new_user.registrationdate
+    ):
+        pass
+    elif is_valid_user(admin) and admin.isadmin:
+        pass
+    else:
+        write_log_short(
+            4, "Someone tried to edit a user without privileges", f"Someone attempted to edit a user without being both a valid user and an admin. User details: {admin}", True
+        )
+        return
     cur = database_connection.cursor()
-    cur.execute("REPLACE INTO users VALUES(?,?,?,?,?,?,?,?)", usr.toTuple())
+    cur.execute("REPLACE INTO users VALUES(?,?,?,?,?,?,?,?)", new_user.toTuple())
     cur.close()
     database_connection.commit()
 
 
-def create_member(member: Member):
+# any user can create a member (consultant or above)
+def create_member(user: User, member: Member):
+    if not (is_valid_user(user)):
+        write_log_short(
+            4,
+            "Someone tried to create a member without privileges",
+            f"Someone attempted to create a member without being a valid user. User details: {user}",
+            True,
+        )
     cur = database_connection.cursor()
     cur.execute("INSERT INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.toTuple())
     database_connection.commit()
 
 
-def create_user(usr: User):
+# admin and above can create a user
+def create_user(admin: User, new_user: User):
+    if not (is_valid_user(admin) and admin.isadmin):
+        write_log_short(
+            4,
+            "Someone tried to create a user without privileges",
+            f"Someone attempted to create a user without being a valid user. User details: {admin}",
+            True,
+        )
+        return
+    if new_user.isadmin and admin.username != "super_admin":
+        write_log_short(
+            4,
+            "Someone tried to create an admin without privileges",
+            f"Someone attempted to create an admin without being super admin. Admin details: {admin}, User details: {new_user}",
+            True,
+        )
+        return
     cur = database_connection.cursor()
-    cur.execute("INSERT INTO users VALUES(?,?,?,?)", usr.toTuple())
+    cur.execute("INSERT INTO users VALUES(?,?,?,?)", new_user.toTuple())
     database_connection.commit()
 
 
 def delete_user(admin: User, user: User) -> bool:
+    # if admin or user are invalid, log and leave
+    if not (is_valid_user(user) and is_valid_user(admin)):
+        write_log_short(
+            4,
+            "Someone tried to delete a user but messed with the inputs",
+            f"Someone attempted to delete a user but the admin or user account was different from their version in the database. Admin details: {admin}, User details: {user}",
+            True,
+        )
+        return False
+    # if either admin isn't actually an admin, log and leave
+    elif not admin.isadmin:
+        write_log_short(
+            4,
+            "Someone tried to delete a user without privileges",
+            f"Someone attempted to delete a user without being a valid admin. User details: {admin}",
+            True,
+        )
+        return False
+    # if trying to delete an admin without being super admin, log and leave
+    elif user.isadmin and admin.username != "super_admin":
+        write_log_short(
+            4,
+            "Someone tried to delete an admin without privileges",
+            f"Someone attempted to delete an admin without being super admin. User details: {admin}",
+            True,
+        )
+        return False
+
     try:
         cur = database_connection.cursor()
         cur.execute("DELETE FROM users WHERE id=?", (user.id.bytes,))
@@ -462,20 +551,23 @@ def delete_user(admin: User, user: User) -> bool:
         return False
 
 
-def get_all_members() -> list[Member]:
+# any user can get all members (Consultant or above)
+def get_all_members(user: User) -> list[Member]:
+    if not is_valid_user(user):
+        write_log_short(4, "Someone tried to get members without being a valid user", f"Someone attempted to get all members but wasn't a valid user. User details: {user}", True)
     cur = database_connection.cursor()
     members = cur.execute("SELECT * FROM members").fetchall()
     return [Member.fromtuple(row) for row in members]
 
 
-def get_all_users(include_admins=False) -> list[User]:
+def get_all_users(user: User) -> list[User]:
+    if not is_valid_user(user):
+        write_log_short(4, "Someone tried to get users without being a valid user", f"Someone attempted to get all users but wasn't a valid user. User details: {user}", True)
     cur = database_connection.cursor()
-    if include_admins:
+    if user.username == "super_admin":
         users = cur.execute("SELECT * FROM users").fetchall()
     else:
-        users = cur.execute(
-            "SELECT * FROM users WHERE isadmin = 0 ORDER BY username"
-        ).fetchall()
+        users = cur.execute("SELECT * FROM users WHERE isadmin = 0 ORDER BY username").fetchall()
     return [User.fromtuple(row) for row in users]
 
 
@@ -494,15 +586,30 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
 
     usr: User = User.fromtuple(data=output)
     if not bcrypt.checkpw(attemptPassword.encode("utf-8"), usr.password):
-        write_log_short(
-            6, "Failed login", f"Failed attempt to log into account {uname}"
-        )
+        write_log_short(6, "Failed login", f"Failed attempt to log into account {uname}")
         return Exception("WrongPassword")
     else:
         return usr
 
 
-def search_members_and_users(search_key: str, role: int) -> list:
+def is_valid_user(user: User) -> bool:
+    "checks whether there is either an exact copy of User in the database or its username is 'super_admin'."
+    if user.username == "super_admin":
+        return True
+    cursor = database_connection.cursor()
+    check_user = User.fromtuple(cursor.execute("SELECT * FROM users WHERE username=?", (user.username,)).fetchone())
+    if check_user == None:
+        return False
+    return user.__eq__(check_user)
+
+
+def search_members_and_users(user: User, search_key: str) -> list:
+    if not is_valid_user(user):
+        write_log_short(
+            4, "Someone tried to search without privileges", f"Someone attempted to search users without being super admin. User details: {user}, Search query: {search_key}", True
+        )
+        return []
+
     cursor = database_connection.cursor()
     search_key = f"%{search_key.lower()}%"
 
@@ -543,11 +650,11 @@ def search_members_and_users(search_key: str, role: int) -> list:
 
     results = cursor.execute(member_query, [search_key] * 6).fetchall()
 
-    if role == 1:
+    if user.isadmin:
         user_results = cursor.execute(admin_query, [search_key] * 5).fetchall()
         results.extend(user_results)
 
-    if role == 2:
+    if user.isadmin and user.username == "super_admin":
         user_results = cursor.execute(superadmin_query, [search_key] * 5).fetchall()
         results.extend(user_results)
 
@@ -555,6 +662,7 @@ def search_members_and_users(search_key: str, role: int) -> list:
 
     members = [Member.fromtuple(row[1:]) for row in results if row[0] == "member"]
     users = [User.fromtuple(row[1:]) for row in results if row[0] == "user"]
+    users.sort(key=(lambda x: x.isadmin))
 
     return members + users
 
