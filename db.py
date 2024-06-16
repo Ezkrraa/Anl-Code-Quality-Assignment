@@ -482,7 +482,7 @@ def edit_member(user: User, member: Member):
             user.username,
             4,
             "Someone tried to edit a member without privileges",
-            f"Someone attempted to edit a member without being a valid user. User: {user.username}",
+            f"Someone attempted to edit a member without being a valid user.",
             True,
         )
         return
@@ -500,7 +500,7 @@ def delete_member(admin: User, member: Member) -> bool:
             admin.username,
             4,
             "Someone tried to delete a member without privileges",
-            f"Someone attempted to delete a member without being a valid admin. User: {admin.username}",
+            f"Someone attempted to delete a member without being a valid admin.",
             True,
         )
         return False
@@ -513,7 +513,7 @@ def delete_member(admin: User, member: Member) -> bool:
             admin.username,
             6,
             "Deleted account",
-            f"{admin.username} deleted the account of {member.firstname} {member.lastname}.",
+            f"Admin deleted the account of {member.firstname} {member.lastname}.",
         )
         return True
     except Exception as e:
@@ -533,7 +533,7 @@ def edit_user(admin: User, new_user: User, old_user: User):
             admin.username,
             5,
             "Someone tried to edit a user that doesn't exist",
-            f"Someone attempted to edit a user that does not exist. User: {admin.username}, Invalid User: {old_user}",
+            f"Someone attempted to edit a user that does not exist. Invalid User: {old_user.username}",
             True,
         )
         return
@@ -554,7 +554,7 @@ def edit_user(admin: User, new_user: User, old_user: User):
             admin.username,
             4,
             "Someone tried to edit a user without privileges",
-            f"Someone attempted to edit a user without being both a valid user and an admin. User: {admin.username}",
+            f"Someone attempted to edit a user without being both a valid user and an admin.",
             True,
         )
         return
@@ -562,7 +562,7 @@ def edit_user(admin: User, new_user: User, old_user: User):
     cur.execute("REPLACE INTO users VALUES(?,?,?,?,?,?,?,?)", new_user.encrypt(load_public_key()).toTuple())
     cur.close()
     database_connection.commit()
-    write_log_short(admin.username, 5, "User edited", f"{admin.username} edited a user. Old user: {old_user.username} => New user: {new_user.username}", True)
+    write_log_short(admin.username, 5, "User edited", f"Admin edited a user. Old user: {old_user.username} => New user: {new_user.username}", True)
     return
 
 
@@ -573,13 +573,13 @@ def create_member(user: User, member: Member):
             user.username,
             4,
             "Someone tried to create a member without privileges",
-            f"Someone attempted to create a member without being a valid user. User: {user.username}",
+            f"Someone attempted to create a member without being a valid user.",
             True,
         )
     cur = database_connection.cursor()
     cur.execute("INSERT INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.encrypt(load_public_key()).toTuple())
     database_connection.commit()
-    write_log_short(user.username, 4, "Member created", f"Someone created a member. User: {user.username}, New member: {member.fullname()}")
+    write_log_short(user.username, 4, "Member created", f"Someone created a member. New member: {member.fullname()}")
 
 
 # admin and above can create a user
@@ -598,7 +598,7 @@ def create_user(admin: User, new_user: User):
             admin.username,
             4,
             "Someone tried to create an admin without privileges",
-            f"Someone attempted to create an admin without being super admin. Admin: {admin.username}, User: {new_user.username}",
+            f"Someone attempted to create an admin without being super admin. User: {new_user.username}",
             True,
         )
         return
@@ -614,7 +614,7 @@ def delete_user(admin: User, user: User) -> bool:
             admin.username,
             4,
             "Someone tried to delete a user but messed with the inputs",
-            f"Someone attempted to delete a user but the admin or user account was different from their version in the database. Admin: {admin.username}, User: {user.username}",
+            f"Someone attempted to delete a user but the admin or user account was different from their version in the database.",
             True,
         )
         return False
@@ -634,7 +634,7 @@ def delete_user(admin: User, user: User) -> bool:
             admin.username,
             4,
             "Someone tried to delete an admin without privileges",
-            f"Someone attempted to delete an admin without being super admin. User: {admin.username}",
+            f"Someone attempted to delete an admin without being super admin.",
             True,
         )
         return False
@@ -648,7 +648,7 @@ def delete_user(admin: User, user: User) -> bool:
             admin.username,
             6,
             "Deletion success",
-            f"{admin.username} deleted the account of {user.username}.",
+            f"Admin deleted the account of {user.username}.",
         )
         return True
     except Exception as e:
@@ -668,12 +668,12 @@ def get_all_members(user: User) -> list[Member]:
             user.username,
             4,
             "Someone tried to get members without being a valid user",
-            f"Someone attempted to get all members but wasn't a valid user. User: {user.username}",
+            f"Someone attempted to get all members but wasn't a valid user.",
             True,
         )
     cur = database_connection.cursor()
     members = cur.execute("SELECT * FROM members").fetchall()
-    write_log_short(user.username, 5, "User fetched members", f"User {user.username} fetched all members. User: {user.username}")
+    write_log_short(user.username, 5, "User fetched members", f"User fetched all members.")
     return [Member.fromtuple(row).decrypt(load_private_key()) for row in members]
 
 
@@ -683,7 +683,7 @@ def get_all_users(user: User) -> list[User]:
             user.username,
             4,
             "Someone tried to get users without being a valid user",
-            f"Someone attempted to get all users but wasn't a valid user. User: {user.username}",
+            f"Someone attempted to get all users but wasn't a valid user.",
             True,
         )
     cur = database_connection.cursor()
@@ -691,7 +691,7 @@ def get_all_users(user: User) -> list[User]:
         users = cur.execute("SELECT * FROM users").fetchall()
     else:
         users = cur.execute("SELECT * FROM users WHERE isadmin = 0 ORDER BY username").fetchall()
-        write_log_short(user.username, 5, "Admin fetched users", f"Admin {user.username} fetched all users. User: {user.username}")
+        write_log_short(user.username, 5, "Admin fetched users", f"Admin fetched all users.")
     return [User.fromtuple(row).decrypt(load_private_key()) for row in users]
 
 
@@ -743,7 +743,7 @@ def search_members_and_users(user: User, search_key: str) -> list[Union[User, Me
             user.username,
             4,
             "Someone tried to search without privileges",
-            f"Someone attempted to search users without being super admin. User: {user.username}, Search query: {search_key}",
+            f"Someone attempted to search users without being super admin. , Search query: {search_key}",
             True,
         )
         return []
@@ -801,7 +801,7 @@ def get_all_logs(user: User) -> list[LogPoint]:
             user.username,
             4,
             "Someone tried to get logs without being a valid user",
-            f"Someone attempted to get all logs but wasn't a valid user. User: {user.username}",
+            f"Someone attempted to get all logs but wasn't a valid user. ",
             True,
         )
     cur = database_connection.cursor()
