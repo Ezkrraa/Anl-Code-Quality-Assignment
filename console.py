@@ -215,7 +215,7 @@ def add_user(admin: db.User, make_admin: bool = False):
                 temp_pw.encode("utf-8"),
                 bcrypt.gensalt(),
             ),
-            role="Consultant",
+            role={"Consultant" if not make_admin else "Admin"},
             fname=first_name,
             lname=last_name,
             regdate=datetime.date.today(),
@@ -588,9 +588,7 @@ def home_screen() -> None:
 def show_search_menu(currentUser: db.User, search_key: str):
     while True:
         clear_console()
-        # search by search_key
         results: list[Union[db.Member, db.User]] = db.search_members_and_users(currentUser, search_key)
-        # TODO: add admins separately
         options = ["Return to main menu"]
         max_len: int = get_max(results)
         for i, result in enumerate(results):
