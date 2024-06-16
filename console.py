@@ -412,12 +412,14 @@ def edit_user(currentUser: db.User, user: db.User) -> None:
             "Return without saving",
             "Return and save",
             f"Username: {user.username}",
+            f"First name: {user.firstname}",
+            f"Last name: {user.lastname}"
         ]
         if currentUser.username == "super_admin":
             options.append(f"Is {'an' if user.isadmin else 'not an'} admin")
         result, index = pick(
             options=options,
-            title=f"{logo}Edit member info:",
+            title=f"{logo}Edit user info:",
             indicator=">",
             default_index=select,
         )
@@ -437,7 +439,17 @@ def edit_user(currentUser: db.User, user: db.User) -> None:
                     print("Can contain letters (a-z), numbers (0-9), underscores (_), apostrophes ('), and periods (.)")
                     print("No distinguish between lowercase or uppercase letters")
                     user.username = input("Enter Username: ")
-            case 3 if currentUser.username == "super_admin":
+            case 3:
+                user.firstname = input("Enter First Name: ").title()
+                while not re.match("^[A-Za-z]*$", user.firstname):
+                    print("Invalid First Name. Please enter again.")
+                    user.firstname = input("Enter First Name: ").title()
+            case 4:
+                user.lastname = input("Enter Last Name: ").title()
+                while not re.match("^[A-Za-z]*$", user.lastname):
+                    print("Invalid Last Name. Please enter again.")
+                    user.lastname = input("Enter Last Name: ").title()
+            case 5 if currentUser.username == "super_admin":
                 select = 3
                 user.isadmin = not user.isadmin
 
@@ -613,11 +625,11 @@ def show_search_menu(currentUser: db.User, search_key: str):
 def show_logs(user: db.User) -> None:
     while True:
         clear_console()
-        options = ["Return", "ID - Timestamp - Username - Description - Info - Suspicious"]
+        options = ["Return", "ID - Severity - Timestamp - Username - Description - Info - Suspicious"]
         logs = db.get_all_logs(user)
         options.extend(
             [
-                f"{i} - {logs[i].timestamp.strftime('%Y-%m-%d %H:%M:%S')} - {logs[i].username} - {logs[i].description} - {logs[i].info} - {'Yes' if logs[i].suspicious else 'No'}"
+                f"{i} - {logs[i].severity} - {logs[i].timestamp.strftime('%Y-%m-%d %H:%M:%S')} - {logs[i].username} - {logs[i].description} - {logs[i].info} - {'Yes' if logs[i].suspicious else 'No'}"
                 for i in range(len(logs))
             ]
         )
