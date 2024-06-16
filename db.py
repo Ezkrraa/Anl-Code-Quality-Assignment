@@ -751,7 +751,6 @@ def search_members_and_users(user: User, search_key: str) -> list[Union[User, Me
         )
         return []
 
-    cursor = database_connection.cursor()
     members = get_all_members(user)
     users = get_all_users(user)
     raw_search_key = search_key.lower()
@@ -775,11 +774,6 @@ def search_members_and_users(user: User, search_key: str) -> list[Union[User, Me
                 or raw_search_key in current_user.role.lower()
             ):
                 search_results.append(current_user)
-
-    if user.username == "super_admin":  # super_admin can see other admins as well
-        for admin_user in users:
-            if admin_user.isadmin and admin_user not in search_results and any(raw_search_key.lower() in str(getattr(admin_user, field, "")).lower() for field in vars(admin_user)):
-                search_results.append(admin_user)
 
     if user.username == "super_admin":  # Additional check if the current user is the super_admin
         for admin_user in users:  # Use a different variable name to avoid conflict
