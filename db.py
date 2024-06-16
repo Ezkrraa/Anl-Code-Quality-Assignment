@@ -2,7 +2,7 @@
 from uuid import uuid4, UUID
 
 # typing is in python STD lib
-from typing import cast, Union
+from typing import Union
 
 # for hashing, database, timestamps
 import bcrypt, sqlite3, datetime
@@ -10,20 +10,23 @@ import bcrypt, sqlite3, datetime
 # for seeding and testing purposes
 from faker import Faker
 
-# random, duhh
+# random for seeding and stuff
 from random import Random
 
+# used for encrypting assymmetrically
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.backends import default_backend
+
+# for parsing b64 encrypted items
 import base64
+
+# for allowing hard copies
 import copy
-import os
 
+# for backups
+import os, shutil
 
-import shutil
-
-import os
 
 rand = Random()
 fake = Faker()
@@ -79,7 +82,7 @@ class LogPoint:
 class User:
     id: UUID
     username: str
-    password: bytes  # updated to bytes
+    password: bytes  # updated to bytes (stored as BLOB(16))
     role: str
     firstname: str
     lastname: str
@@ -373,7 +376,6 @@ def encrypt_data(public_key, data: bytes):
     return base64.b64encode(encrypted_data).decode()
 
 
-# Function to load the private key
 def load_private_key():
     if not os.path.exists("private_key.pem"):
         generate_keys()

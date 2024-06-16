@@ -1,18 +1,27 @@
 # for masking password input, from STD lib
 from getpass import getpass
 
+# for casting and Union types
 from typing import cast, Union
 
 # for clearing the console
 import platform, os
 
+# for selection in a list of options
 from pick import pick
-import db
+
+# for hashing and salting passwords
 import bcrypt
+
 import datetime
 import re
 import random
 import copy
+
+from uuid import uuid4
+
+# for database access
+import db
 
 rand = random
 noclear: bool = False
@@ -186,6 +195,7 @@ def add_user(admin: db.User, make_admin: bool = False):
             lname=last_name,
             regdate=datetime.date.today(),
             isadmin=make_admin,
+            uid=uuid4().bytes,
         )
         db.create_user(admin, new_consultant)
         show_message(f"Created {'admin' if make_admin else 'consultant'} with the password {temp_pw}.")
@@ -225,6 +235,7 @@ def change_password(usr: db.User):
         show_message("Password changed successfully.")
         break
 
+
 def reset_password(admin: db.User, user: db.User):
     old_user = copy.deepcopy(user)
     new_pw = f"TempPassword-{str(hex(rand.getrandbits(32))[2:])}"
@@ -232,8 +243,6 @@ def reset_password(admin: db.User, user: db.User):
     user.password = new_crypt_pw
     db.edit_user(admin, user, old_user)
     show_message(f"Password reset for {user.username}. New password: {new_pw}")
-        
-
 
 
 def show_members(user: db.User) -> None:
@@ -265,8 +274,7 @@ def show_member(user: db.User, member: db.Member) -> None:
                 confirm_options = ["No", "Yes"]
                 _, index = pick(
                     options=confirm_options,
-                    title=f"Are you sure you want to delete {member.firstname} {member.lastname}'s account?",
-                    # TODO: add user
+                    title=f"Are you sure you want to delete {member.fullname()}'s account?",
                 )
                 match index:
                     case 0:
