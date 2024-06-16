@@ -30,7 +30,6 @@ fake = Faker()
 database_connection: sqlite3.Connection
 
 
-
 class LogPoint:
     id: UUID
     timestamp: datetime.datetime
@@ -63,13 +62,13 @@ class LogPoint:
             self.info,
             self.suspicious,
         )
-    
+
     def encrypt(self, key):
         new_log = copy.deepcopy(self)
         new_log.description = encrypt_data(key, self.description.encode())
         new_log.info = encrypt_data(key, self.info.encode())
         return new_log
-    
+
     def decrypt(self, key):
         new_log = copy.deepcopy(self)
         new_log.description = decrypt_data(key, self.description)
@@ -163,21 +162,20 @@ class User:
             and self.registrationdate == value.registrationdate
             and self.isadmin == value.isadmin
         )
-    
+
     def encrypt(self, key):
         new_user = User.fromtuple(self.toTuple())
         new_user.username = encrypt_data(key, self.username.encode())
         new_user.firstname = encrypt_data(key, self.firstname.encode())
         new_user.lastname = encrypt_data(key, self.lastname.encode())
         return new_user
-    
+
     def decrypt(self, key):
         new_user = User.fromtuple(self.toTuple())
         new_user.username = decrypt_data(key, self.username)
         new_user.firstname = decrypt_data(key, self.firstname)
         new_user.lastname = decrypt_data(key, self.lastname)
         return new_user
-    
 
 
 class Member:
@@ -274,7 +272,7 @@ class Member:
 
     def fullname(self) -> str:
         return f"{self.firstname} {self.lastname}"
-    
+
     def encrypt(self, key):
         new_member = copy.deepcopy(self)
         new_member.firstname = encrypt_data(key, self.firstname.encode())
@@ -284,7 +282,7 @@ class Member:
         new_member.email = encrypt_data(key, self.email.encode())
         new_member.phonenumber = encrypt_data(key, self.phonenumber.encode())
         return new_member
-    
+
     def decrypt(self, key):
         new_member = copy.deepcopy(self)
         new_member.firstname = decrypt_data(key, self.firstname)
@@ -294,7 +292,6 @@ class Member:
         new_member.email = decrypt_data(key, self.email)
         new_member.phonenumber = decrypt_data(key, self.phonenumber)
         return new_member
-
 
 
 def setup_database() -> None:
@@ -361,28 +358,19 @@ def create_tables():
     except sqlite3.Error as e:
         write_log_short("", 4, "Seeding error", f"Tried to seed database, but ran into error {e}")
 
+
 def load_public_key():
     if not os.path.exists("public_key.pem"):
         generate_keys()
-    
+
     with open("public_key.pem", "rb") as key_file:
-        public_key = serialization.load_pem_public_key(
-            key_file.read(),
-            backend=default_backend()
-        )
+        public_key = serialization.load_pem_public_key(key_file.read(), backend=default_backend())
     return public_key
 
-def encrypt_data(public_key, data: bytes):
-    encrypted_data = public_key.encrypt(
-        data,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    return base64.b64encode(encrypted_data).decode()
 
+def encrypt_data(public_key, data: bytes):
+    encrypted_data = public_key.encrypt(data, padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None))
+    return base64.b64encode(encrypted_data).decode()
 
 
 # Function to load the private key
@@ -391,51 +379,27 @@ def load_private_key():
         generate_keys()
 
     with open("private_key.pem", "rb") as key_file:
-        private_key = serialization.load_pem_private_key(
-            key_file.read(),
-            password=None,  # Assuming no password protection
-            backend=default_backend()
-        )
+        private_key = serialization.load_pem_private_key(key_file.read(), password=None, backend=default_backend())  # Assuming no password protection
     return private_key
 
+
 def generate_keys() -> None:
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
-        backend=default_backend()
-    )
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
     with open("private_key.pem", "wb") as private_key_file:
         private_key_file.write(
-            private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            )
+            private_key.private_bytes(encoding=serialization.Encoding.PEM, format=serialization.PrivateFormat.PKCS8, encryption_algorithm=serialization.NoEncryption())
         )
     public_key = private_key.public_key()
 
     with open("public_key.pem", "wb") as public_key_file:
-        public_key_file.write(
-            public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            )
-        )
+        public_key_file.write(public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo))
 
     write_log_short("", 6, "Generated keys", "Generated a new pair of RSA keys")
 
 
 def decrypt_data(private_key, encrypted_data):
-    decrypted_data = private_key.decrypt(
-        base64.b64decode(encrypted_data),
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
+    decrypted_data = private_key.decrypt(base64.b64decode(encrypted_data), padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None))
     return decrypted_data.decode()
-
 
 
 def create_test_admin():
@@ -453,8 +417,8 @@ def create_test_admin():
         return
     try:
         cur.execute(
-            "INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)", 
-            (User("admin", bcryptpass, "Admin", "mister admin", "a user", datetime.date.today(), True, uuid4().bytes).encrypt(load_public_key()).toTuple())
+            "INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+            (User("admin", bcryptpass, "Admin", "mister admin", "a user", datetime.date.today(), True, uuid4().bytes).encrypt(load_public_key()).toTuple()),
         )
         cur.execute(
             "INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
@@ -529,7 +493,9 @@ def gen_memberid() -> str:
 # any user can edit members
 def edit_member(user: User, member: Member):
     if not is_valid_user(user):
-        write_log_short(user.username, 4, "Someone tried to edit a member without privileges", f"Someone attempted to edit a member without being a valid user. User details: {user}", True)
+        write_log_short(
+            user.username, 4, "Someone tried to edit a member without privileges", f"Someone attempted to edit a member without being a valid user. User details: {user}", True
+        )
         return
     cur = database_connection.cursor()
     cur.execute("REPLACE INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.encrypt(load_public_key()).toTuple())
@@ -537,10 +503,17 @@ def edit_member(user: User, member: Member):
     database_connection.commit()
     write_log_short(user.username, 3, "Edited member info", f"Changed {member.firstname} {member.lastname} info")
 
+
 # only admins and above can delete members
 def delete_member(admin: User, member: Member) -> bool:
     if not (is_valid_user(admin) and admin.isadmin):
-        write_log_short(admin.username, 4, "Someone tried to delete a member without privileges", f"Someone attempted to delete a member without being a valid admin. User details: {admin}", True)
+        write_log_short(
+            admin.username,
+            4,
+            "Someone tried to delete a member without privileges",
+            f"Someone attempted to delete a member without being a valid admin. User details: {admin}",
+            True,
+        )
         return False
     try:
         cur = database_connection.cursor()
@@ -590,7 +563,10 @@ def edit_user(admin: User, new_user: User, old_user: User):
     else:
         write_log_short(
             admin.username,
-            4, "Someone tried to edit a user without privileges", f"Someone attempted to edit a user without being both a valid user and an admin. User details: {admin}", True
+            4,
+            "Someone tried to edit a user without privileges",
+            f"Someone attempted to edit a user without being both a valid user and an admin. User details: {admin}",
+            True,
         )
         return
     cur = database_connection.cursor()
@@ -694,12 +670,14 @@ def delete_user(admin: User, user: User) -> bool:
             f"Failed to delete user {user.username} due to error {e}",
         )
         return False
-    
+
 
 # any user can get all members (Consultant or above)
 def get_all_members(user: User) -> list[Member]:
     if not is_valid_user(user):
-        write_log_short(user.username, 4, "Someone tried to get members without being a valid user", f"Someone attempted to get all members but wasn't a valid user. User details: {user}", True)
+        write_log_short(
+            user.username, 4, "Someone tried to get members without being a valid user", f"Someone attempted to get all members but wasn't a valid user. User details: {user}", True
+        )
     cur = database_connection.cursor()
     members = cur.execute("SELECT * FROM members").fetchall()
     write_log_short(user.username, 5, "User fetched members", f"User {user.username} fetched all members. User details: {user}")
@@ -708,7 +686,9 @@ def get_all_members(user: User) -> list[Member]:
 
 def get_all_users(user: User) -> list[User]:
     if not is_valid_user(user):
-        write_log_short(user.username, 4, "Someone tried to get users without being a valid user", f"Someone attempted to get all users but wasn't a valid user. User details: {user}", True)
+        write_log_short(
+            user.username, 4, "Someone tried to get users without being a valid user", f"Someone attempted to get all users but wasn't a valid user. User details: {user}", True
+        )
     cur = database_connection.cursor()
     if user.username == "super_admin":
         users = cur.execute("SELECT * FROM users").fetchall()
@@ -727,18 +707,25 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
         return Exception("SuperAdmin")
 
     cursor = database_connection.cursor()
-    output = cursor.execute("SELECT * FROM users WHERE username=?", (uname,)).fetchone()
+
+    encrypted_users = cursor.execute("SELECT * FROM users").fetchall()
+    output: Union[User, None] = None
+    for i in range(len(encrypted_users)):
+        curr_user = User.fromtuple(encrypted_users[i]).decrypt(load_private_key())
+        if curr_user.username == uname:
+            output = curr_user
+            break
 
     if output is None:
         write_log_short(uname, 4, "Failed login", f"Failed attempt to log into account {uname}, which doesn't exist")
         return Exception("UserNotFound")
 
-    usr: User = User.fromtuple(data=output)
+    usr: User = output
     if not bcrypt.checkpw(attemptPassword.encode("utf-8"), usr.password):
         write_log_short(uname, 6, "Failed login", f"Failed attempt to log into account {uname}")
         return Exception("WrongPassword")
     else:
-        write_log_short(uname, 5, "Successfull login", f"{uname} logged in successfully")
+        write_log_short(uname, 5, "Successful login", f"{uname} logged in successfully")
         return usr
 
 
@@ -756,7 +743,11 @@ def is_valid_user(user: User) -> bool:
 def search_members_and_users(user: User, search_key: str) -> list[Union[User, Member]]:
     if not is_valid_user(user):
         write_log_short(
-            user.username, 4, "Someone tried to search without privileges", f"Someone attempted to search users without being super admin. User details: {user}, Search query: {search_key}", True
+            user.username,
+            4,
+            "Someone tried to search without privileges",
+            f"Someone attempted to search users without being super admin. User details: {user}, Search query: {search_key}",
+            True,
         )
         return []
 
@@ -782,19 +773,24 @@ def search_members_and_users(user: User, search_key: str) -> list[Union[User, Me
     if user.isadmin:  # Check if the current user is an admin
         for current_user in users:  # Use a different variable name to avoid conflict
             # For admins, search among all users
-            if raw_search_key in current_user.username.lower() or raw_search_key in current_user.firstname.lower() or raw_search_key in current_user.lastname.lower() or raw_search_key in current_user.registrationdate.lower() or raw_search_key in current_user.role.lower():
+            if (
+                raw_search_key in current_user.username.lower()
+                or raw_search_key in current_user.firstname.lower()
+                or raw_search_key in current_user.lastname.lower()
+                or raw_search_key in current_user.registrationdate.lower()
+                or raw_search_key in current_user.role.lower()
+            ):
                 search_results.append(current_user)
-    
+
     if user.username == "super_admin":  # Additional check if the current user is the super_admin
         for admin_user in users:  # Use a different variable name to avoid conflict
             # Check if search_key is in any of the admin_user's fields
-            if any(raw_search_key.lower() in str(getattr(admin_user, field, '')).lower() for field in vars(admin_user)):
+            if any(raw_search_key.lower() in str(getattr(admin_user, field, "")).lower() for field in vars(admin_user)):
                 # For super_admin, add other admins to the search results if the search key is in their fields
                 if admin_user.isadmin and admin_user not in search_results:
                     search_results.append(admin_user)
-    
-    return search_results
 
+    return search_results
 
 
 def write_log_short(username: str, severity: int, desc: str, info: str, suspicious=False):
@@ -808,12 +804,16 @@ def write_log(logpoint: LogPoint):
     cursor.close()
     database_connection.commit()
 
+
 def get_all_logs(user: User) -> list[LogPoint]:
     if not is_valid_user(user):
-        write_log_short(user.username, 4, "Someone tried to get logs without being a valid user", f"Someone attempted to get all logs but wasn't a valid user. User details: {user}", True)
+        write_log_short(
+            user.username, 4, "Someone tried to get logs without being a valid user", f"Someone attempted to get all logs but wasn't a valid user. User details: {user}", True
+        )
     cur = database_connection.cursor()
     logs = cur.execute("SELECT * FROM logs").fetchall()
     return [LogPoint.fromtuple(row).decrypt(load_private_key()) for row in logs]
+
 
 def create_backup(admin: User):
     # Updated to include hours and minutes for multiple backups per day
@@ -828,6 +828,7 @@ def create_backup(admin: User):
     except Exception as e:
         write_log_short(admin.username, 4, "Backup failed", f"Failed to create backup at {backup_filename} due to error {e}")
 
+
 def restore_backup(admin: User, backup_date):
     backup_filename = f"{os.getcwd()}/backups/{backup_date}"  # Adjusted to current working directory
     if os.path.exists(backup_filename):
@@ -838,6 +839,7 @@ def restore_backup(admin: User, backup_date):
             write_log_short(admin.username, 4, "Backup restore failed", f"Failed to restore backup from {backup_filename} due to error {e}")
     else:
         write_log_short(admin.username, 4, "Backup restore failed", f"Failed to restore backup from {backup_filename}")
+
 
 def show_backups():
     backups_dir = os.path.join(os.getcwd(), "backups")  # Define the backups directory path
