@@ -318,6 +318,7 @@ def change_member(index: int, member: db.Member, new_value: str) -> db.Member:
 
 def show_users(currentUser: db.User) -> None:
     while True:
+        clear_console()
         users: list[db.User] = db.get_all_users(currentUser)
         options = ["Return to main menu"]
         options.extend([f"{users[i].username}" for i in range(len(users))])
