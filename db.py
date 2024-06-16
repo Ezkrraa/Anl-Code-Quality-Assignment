@@ -228,9 +228,12 @@ class Member:
         age = rand.randint(20, 80)
         gender = rand.choice(["F", "F", "M", "M", "O"])
         weight = rand.randint(50, 110)
-        address = fake.address().replace("\n", "")
+        cities = ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose"]
+        city = rand.choice(cities)
+        zip_code = f"{rand.randint(1000, 9999)}{rand.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ')}{rand.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ')}"
+        address = f"{fake.street_address()}, {zip_code}, {city}"
         email = fake.email()
-        phonenumber = str(rand.randint(10000000, 99999999))
+        phonenumber = "+31-6" + str(rand.randint(10000000, 99999999))
         registrationdate = str(datetime.datetime.now().date().today())
         return cls(
             firstname,
@@ -468,26 +471,6 @@ def gen_memberid() -> str:
         anymembers = cur.execute("SELECT * FROM members WHERE id=?", (new_id,)).fetchone()
         if anymembers is None:
             return new_id
-
-
-# def unlock_account(adminname: User, usr: User):
-#     cur = database_connection.cursor()
-#     result = cur.execute(
-#         "SELECT * FROM users WHERE username = ?", (usr.username,)
-#     ).fetchone()
-#     if result == None:
-#         return
-#     admin: User = User.fromtuple(result)
-#     if not admin.isadmin:
-#         write_log_short(
-#             3,
-#             f"user {admin.username} tried to unlock {usr}'s account, but is not an admin.",
-#         )  # should not be possible to do, since I shouldn't be calling this function with a non-admin at all
-#         return
-#     cur.execute("UPDATE users SET failedlogins = 0 WHERE username=?", (usr.username,))
-#     cur.close()
-#     database_connection.commit()
-#     write_log_short(6, f"{admin.username} unlocked {usr.username}'s account.")
 
 
 # any user can edit members

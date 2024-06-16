@@ -106,7 +106,7 @@ def add_member(user: db.User):
 
         # age is between 0 and 100 (exclusive)
         age = input("Enter Age: ")
-        while not age.isdigit() or 0 < int(age) < 100:
+        while not (age.isdigit() and 0 < int(age) < 100):
             print("Invalid Age. Please enter again.")
             age = input("Enter Age: ")
         age = int(age)
@@ -119,7 +119,7 @@ def add_member(user: db.User):
 
         weight = input("Enter Weight: ")
         # human weight is between 0 and 700 (kg, exclusive)
-        while not weight.isdigit() or 0 < int(weight) < 700:
+        while not (weight.isdigit() and 0 < int(weight) < 700):
             print("Invalid Weight. Please enter again.")
             weight = input("Enter Weight: ")
         weight = int(weight)
@@ -169,7 +169,7 @@ def add_member(user: db.User):
             weight,
             address,
             email,
-            phonenumber,
+            str("+31-6") + phonenumber,
             datetime.date.today(),
             db.gen_memberid(),
         )
@@ -266,7 +266,7 @@ def show_members(user: db.User) -> None:
         clear_console()
         options = ["Return"]
         members = db.get_all_members(user)
-        options.extend([f"{members[i].firstname} {members[i].lastname}" for i in range(len(members))])
+        options.extend([f"First name: {members[i].firstname} - Last name: {members[i].lastname}" for i in range(len(members))])
         selection, index = pick(options, title=f"{logo}\nMember menu", indicator=">")
         match index:
             case 0:
