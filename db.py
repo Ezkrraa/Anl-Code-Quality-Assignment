@@ -13,6 +13,14 @@ from faker import Faker
 # random, duhh
 from random import Random
 
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.backends import default_backend
+import base64
+import copy
+import os
+
+
 import shutil
 
 import os
@@ -20,6 +28,7 @@ import os
 rand = Random()
 fake = Faker()
 database_connection: sqlite3.Connection
+
 
 
 class LogPoint:
@@ -54,6 +63,18 @@ class LogPoint:
             self.info,
             self.suspicious,
         )
+    
+    def encrypt(self, key):
+        new_log = copy.deepcopy(self)
+        new_log.description = encrypt_data(key, self.description.encode())
+        new_log.info = encrypt_data(key, self.info.encode())
+        return new_log
+    
+    def decrypt(self, key):
+        new_log = copy.deepcopy(self)
+        new_log.description = decrypt_data(key, self.description)
+        new_log.info = decrypt_data(key, self.info)
+        return new_log
 
 
 class User:
@@ -142,6 +163,21 @@ class User:
             and self.registrationdate == value.registrationdate
             and self.isadmin == value.isadmin
         )
+    
+    def encrypt(self, key):
+        new_user = User.fromtuple(self.toTuple())
+        new_user.username = encrypt_data(key, self.username.encode())
+        new_user.firstname = encrypt_data(key, self.firstname.encode())
+        new_user.lastname = encrypt_data(key, self.lastname.encode())
+        return new_user
+    
+    def decrypt(self, key):
+        new_user = User.fromtuple(self.toTuple())
+        new_user.username = decrypt_data(key, self.username)
+        new_user.firstname = decrypt_data(key, self.firstname)
+        new_user.lastname = decrypt_data(key, self.lastname)
+        return new_user
+    
 
 
 class Member:
@@ -238,6 +274,27 @@ class Member:
 
     def fullname(self) -> str:
         return f"{self.firstname} {self.lastname}"
+    
+    def encrypt(self, key):
+        new_member = copy.deepcopy(self)
+        new_member.firstname = encrypt_data(key, self.firstname.encode())
+        new_member.lastname = encrypt_data(key, self.lastname.encode())
+        new_member.gender = encrypt_data(key, self.gender.encode())
+        new_member.address = encrypt_data(key, self.address.encode())
+        new_member.email = encrypt_data(key, self.email.encode())
+        new_member.phonenumber = encrypt_data(key, self.phonenumber.encode())
+        return new_member
+    
+    def decrypt(self, key):
+        new_member = copy.deepcopy(self)
+        new_member.firstname = decrypt_data(key, self.firstname)
+        new_member.lastname = decrypt_data(key, self.lastname)
+        new_member.gender = decrypt_data(key, self.gender)
+        new_member.address = decrypt_data(key, self.address)
+        new_member.email = decrypt_data(key, self.email)
+        new_member.phonenumber = decrypt_data(key, self.phonenumber)
+        return new_member
+
 
 
 def setup_database() -> None:
@@ -304,6 +361,82 @@ def create_tables():
     except sqlite3.Error as e:
         write_log_short("", 4, "Seeding error", f"Tried to seed database, but ran into error {e}")
 
+def load_public_key():
+    if not os.path.exists("public_key.pem"):
+        generate_keys()
+    
+    with open("public_key.pem", "rb") as key_file:
+        public_key = serialization.load_pem_public_key(
+            key_file.read(),
+            backend=default_backend()
+        )
+    return public_key
+
+def encrypt_data(public_key, data: bytes):
+    encrypted_data = public_key.encrypt(
+        data,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    return base64.b64encode(encrypted_data).decode()
+
+
+
+# Function to load the private key
+def load_private_key():
+    if not os.path.exists("private_key.pem"):
+        generate_keys()
+
+    with open("private_key.pem", "rb") as key_file:
+        private_key = serialization.load_pem_private_key(
+            key_file.read(),
+            password=None,  # Assuming no password protection
+            backend=default_backend()
+        )
+    return private_key
+
+def generate_keys() -> None:
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+        backend=default_backend()
+    )
+    with open("private_key.pem", "wb") as private_key_file:
+        private_key_file.write(
+            private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+        )
+    public_key = private_key.public_key()
+
+    with open("public_key.pem", "wb") as public_key_file:
+        public_key_file.write(
+            public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            )
+        )
+
+    write_log_short("", 6, "Generated keys", "Generated a new pair of RSA keys")
+
+
+def decrypt_data(private_key, encrypted_data):
+    decrypted_data = private_key.decrypt(
+        base64.b64decode(encrypted_data),
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    return decrypted_data.decode()
+
+
 
 def create_test_admin():
     "creates a default test user"
@@ -319,32 +452,13 @@ def create_test_admin():
         )
         return
     try:
-        registrationdate = datetime.datetime.now().strftime("%Y-%m-%d")
         cur.execute(
-            "INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                uuid4().bytes,
-                "admin",
-                bcryptpass,
-                "admin",
-                "Admin",
-                "User",
-                registrationdate,
-                True,
-            ),
+            "INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)", 
+            (User("admin", bcryptpass, "Admin", "mister admin", "a user", datetime.date.today(), True).encrypt(load_public_key()).toTuple())
         )
         cur.execute(
             "INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                uuid4().bytes,
-                "user",
-                bcryptpass,
-                "user",
-                "Test",
-                "User",
-                registrationdate,
-                False,
-            ),
+            (User("user", bcryptpass, "Consultant", "mister user", "a user", datetime.date.today(), False).encrypt(load_public_key()).toTuple()),
         )
         database_connection.commit()
         cur.close()
@@ -366,9 +480,9 @@ def create_test_admin():
 
 def seed_database():
     cursor = database_connection.cursor()
-    seed_members = [Member.genrandom().toTuple() for _ in range(50)]
+    seed_members = [Member.genrandom().encrypt(load_public_key()).toTuple() for _ in range(50)]
     cursor.executemany("INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", seed_members)
-    seed_users = [User.genRandom().toTuple() for _ in range(20)]
+    seed_users = [User.genRandom().encrypt(load_public_key()).toTuple() for _ in range(20)]
     cursor.executemany("INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)", seed_users)
     cursor.close()
     database_connection.commit()
@@ -418,7 +532,7 @@ def edit_member(user: User, member: Member):
         write_log_short(user.username, 4, "Someone tried to edit a member without privileges", f"Someone attempted to edit a member without being a valid user. User details: {user}", True)
         return
     cur = database_connection.cursor()
-    cur.execute("REPLACE INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.toTuple())
+    cur.execute("REPLACE INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.encrypt(load_public_key()).toTuple())
     cur.close()
     database_connection.commit()
     write_log_short(user.username, 3, "Edited member info", f"Changed {member.firstname} {member.lastname} info")
@@ -480,7 +594,7 @@ def edit_user(admin: User, new_user: User, old_user: User):
         )
         return
     cur = database_connection.cursor()
-    cur.execute("REPLACE INTO users VALUES(?,?,?,?,?,?,?,?)", new_user.toTuple())
+    cur.execute("REPLACE INTO users VALUES(?,?,?,?,?,?,?,?)", new_user.encrypt(load_public_key()).toTuple())
     cur.close()
     database_connection.commit()
     write_log_short(admin.username, 5, "User edited", f"Someone edited a user. Admin: {admin}, New user: {new_user}, Old user: {old_user}", True)
@@ -498,7 +612,7 @@ def create_member(user: User, member: Member):
             True,
         )
     cur = database_connection.cursor()
-    cur.execute("INSERT INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.toTuple())
+    cur.execute("INSERT INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.encrypt(load_public_key()).toTuple())
     database_connection.commit()
     write_log_short(user.username, 4, "Member created", f"Someone created a member. User: {user}, New member: {member}")
 
@@ -580,7 +694,7 @@ def delete_user(admin: User, user: User) -> bool:
             f"Failed to delete user {user.username} due to error {e}",
         )
         return False
-
+    
 
 # any user can get all members (Consultant or above)
 def get_all_members(user: User) -> list[Member]:
@@ -600,8 +714,8 @@ def get_all_users(user: User) -> list[User]:
         users = cur.execute("SELECT * FROM users").fetchall()
     else:
         users = cur.execute("SELECT * FROM users WHERE isadmin = 0 ORDER BY username").fetchall()
-    write_log_short(user.username, 5, "Admin fetched users", f"Admin {user.username} fetched all users. User details: {user}")
-    return [User.fromtuple(row) for row in users]
+        write_log_short(user.username, 5, "Admin fetched users", f"Admin {user.username} fetched all users. User details: {user}")
+    return [User.fromtuple(row).decrypt(load_private_key()) for row in users]
 
 
 def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
@@ -633,7 +747,7 @@ def is_valid_user(user: User) -> bool:
     if user.username == "super_admin":
         return True
     cursor = database_connection.cursor()
-    check_user = User.fromtuple(cursor.execute("SELECT * FROM users WHERE username=?", (user.username,)).fetchone())
+    check_user = User.fromtuple(cursor.execute("SELECT * FROM users WHERE id=?", (user.id.bytes,)).fetchone()).decrypt(load_private_key())
     if check_user == None:
         return False
     return user.__eq__(check_user)

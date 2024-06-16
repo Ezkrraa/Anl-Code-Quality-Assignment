@@ -252,6 +252,7 @@ def show_member(user: db.User, member: db.Member) -> None:
                 _, index = pick(
                     options=confirm_options,
                     title=f"Are you sure you want to delete {member.firstname} {member.lastname}'s account?",
+                    # TODO: add user
                 )
                 match index:
                     case 0:
@@ -342,6 +343,7 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
                 _, index = pick(
                     options=confirm_options,
                     title=f"Are you sure you want to delete {usr.username}'s account?",
+                    indicator='>'
                 )
                 match index:
                     case 0:

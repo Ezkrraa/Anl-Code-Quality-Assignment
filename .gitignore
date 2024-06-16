@@ -5,6 +5,9 @@
 *.db
 *.db.bak
 
+# ignore keys
+*.pem
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
