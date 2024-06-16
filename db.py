@@ -750,6 +750,7 @@ def search_members_and_users(user: User, search_key: str) -> list[Union[User, Me
 
     members = get_all_members(user)
     users = get_all_users(user)
+    users.sort(key=(lambda x: x.isadmin))
     raw_search_key = search_key.lower()
 
     search_results = []
