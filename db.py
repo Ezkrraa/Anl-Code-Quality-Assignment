@@ -454,11 +454,11 @@ def create_test_admin():
     try:
         cur.execute(
             "INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)", 
-            (User("admin", bcryptpass, "Admin", "mister admin", "a user", datetime.date.today(), True).encrypt(load_public_key()).toTuple())
+            (User("admin", bcryptpass, "Admin", "mister admin", "a user", datetime.date.today(), True, uuid4().bytes).encrypt(load_public_key()).toTuple())
         )
         cur.execute(
             "INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-            (User("user", bcryptpass, "Consultant", "mister user", "a user", datetime.date.today(), False).encrypt(load_public_key()).toTuple()),
+            (User("user", bcryptpass, "Consultant", "mister user", "a user", datetime.date.today(), False, uuid4().bytes).encrypt(load_public_key()).toTuple()),
         )
         database_connection.commit()
         cur.close()
@@ -703,7 +703,7 @@ def get_all_members(user: User) -> list[Member]:
     cur = database_connection.cursor()
     members = cur.execute("SELECT * FROM members").fetchall()
     write_log_short(user.username, 5, "User fetched members", f"User {user.username} fetched all members. User details: {user}")
-    return [Member.fromtuple(row) for row in members]
+    return [Member.fromtuple(row).decrypt(load_private_key()) for row in members]
 
 
 def get_all_users(user: User) -> list[User]:
@@ -810,8 +810,8 @@ def search_members_and_users(user: User, search_key: str) -> list[Union[User, Me
 
     cursor.close()
 
-    members = [Member.fromtuple(row[1:]) for row in results if row[0] == "member"]
-    users = [User.fromtuple(row[1:]) for row in results if row[0] == "user"]
+    members = [Member.fromtuple(row[1:]).decrypt(load_private_key()) for row in results if row[0] == "member"]
+    users = [User.fromtuple(row[1:]).decrypt(load_private_key()) for row in results if row[0] == "user"]
     users.sort(key=(lambda x: x.isadmin))
 
     return members + users
