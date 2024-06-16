@@ -98,24 +98,28 @@ def add_member(user: db.User):
             print("Invalid First Name. Please enter again.")
             firstname = input("Enter First Name: ")
 
+        # names are alpha
         lastname = input("Enter Last Name: ")
         while not re.match("^[A-Za-z]*$", lastname):
             print("Invalid Last Name. Please enter again.")
             lastname = input("Enter Last Name: ")
 
+        # age is between 0 and 100 (exclusive)
         age = input("Enter Age: ")
-        while not age.isdigit() or int(age) < 0:
+        while not age.isdigit() or 0 < int(age) < 100:
             print("Invalid Age. Please enter again.")
             age = input("Enter Age: ")
         age = int(age)
 
+        # gender is a single character (normalized to uppercase)
         gender = input("Enter Gender (M, F, O): ").upper()
         while len(gender) != 1:
             print("Invalid Gender. Please enter again.")
             gender = input("Enter Gender: ").upper()
 
         weight = input("Enter Weight: ")
-        while not weight.isdigit() or int(weight) < 0:
+        # human weight is between 0 and 700 (kg, exclusive)
+        while not weight.isdigit() or 0 < int(weight) < 700:
             print("Invalid Weight. Please enter again.")
             weight = input("Enter Weight: ")
         weight = int(weight)
@@ -152,8 +156,8 @@ def add_member(user: db.User):
             print("Invalid Email. Please enter again.")
             email = input("Enter Email: ")
 
-        phonenumber = input("Enter Phone Number: ")
-        while not re.match("^[0-9]*$", phonenumber):
+        phonenumber = input("Enter Phone Number: +31-6")
+        while not re.match(r"^[0-9]{8}$", phonenumber):
             print("Invalid Phone Number. Please enter again.")
             phonenumber = input("Enter Phone Number: ")
 
@@ -376,11 +380,7 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
                 edit_user(currentUser, usr)
             case 2:
                 confirm_options = ["No", "Yes"]
-                _, index = pick(
-                    options=confirm_options,
-                    title=f"Are you sure you want to delete {usr.username}'s account?",
-                    indicator='>'
-                )
+                _, index = pick(options=confirm_options, title=f"Are you sure you want to delete {usr.username}'s account?", indicator=">")
                 match index:
                     case 0:
                         show_message(f"Not deleting {usr.username}'s account.")
@@ -486,7 +486,17 @@ def super_admin_menu():
         True,
     )
     while True:
-        su_admin_options = ["Logout", "Search members", "Show members", "Show admins and consultants", "Add a member", "Add a consultant", "Add an admin", "Show logs", "Create/restore backups"]
+        su_admin_options = [
+            "Logout",
+            "Search members",
+            "Show members",
+            "Show admins and consultants",
+            "Add a member",
+            "Add a consultant",
+            "Add an admin",
+            "Show logs",
+            "Create/restore backups",
+        ]
         selection, index = pick(
             su_admin_options,
             title=f"{logo}\nSUPER ADMIN - MAIN MENU\nWelcome, super admin!",
@@ -592,13 +602,19 @@ def show_search_menu(currentUser: db.User, search_key: str):
                 show_member(currentUser, selected_result)
             elif isinstance(selected_result, db.User):
                 show_user(currentUser, selected_result)
-    
+
+
 def show_logs(user: db.User) -> None:
     while True:
         clear_console()
         options = ["Return", "ID - Timestamp - Username - Description - Info - Suspicious"]
         logs = db.get_all_logs(user)
-        options.extend([f"{i} - {logs[i].timestamp.strftime('%Y-%m-%d %H:%M:%S')} - {logs[i].username} - {logs[i].description} - {logs[i].info} - {'Yes' if logs[i].suspicious else 'No'}" for i in range(len(logs))])
+        options.extend(
+            [
+                f"{i} - {logs[i].timestamp.strftime('%Y-%m-%d %H:%M:%S')} - {logs[i].username} - {logs[i].description} - {logs[i].info} - {'Yes' if logs[i].suspicious else 'No'}"
+                for i in range(len(logs))
+            ]
+        )
         selection, index = pick(options, title=f"{logo}\nLogs menu", indicator=">")
         match index:
             case 0:
@@ -616,6 +632,7 @@ def get_max(lst: list[Union[db.User, db.Member]]) -> int:
             max_len = max(max_len, len(f"{obj.role}: {obj.username}"))
     return max_len
 
+
 def backup_menu(admin: db.User):
     while True:
         clear_console()
@@ -630,6 +647,7 @@ def backup_menu(admin: db.User):
                 restore_backups(admin)
             case _:
                 show_message("Invalid option.")
+
 
 def restore_backups(admin: db.User):
     while True:
