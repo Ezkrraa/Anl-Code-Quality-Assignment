@@ -766,22 +766,20 @@ def search_members_and_users(user: User, search_key: str) -> list[Union[User, Me
     raw_search_key = search_key.lower()
 
     search_results = []
-    for member in members:
+    for member in members: # Search among all members
         if any(raw_search_key in getattr(member, attr).lower() for attr in ['firstname', 'lastname', 'email', 'phonenumber', 'address', 'registrationdate']) or raw_search_key == str(member.age) or raw_search_key in str(member.id):
             search_results.append(member)
 
-    if user.isadmin:  # Check if the current user is an admin
+    if user.isadmin or user.username == "super_admin":  # Admins and super_admin can see members and normal users
         for current_user in users:
-            # For admins, search among all users
-            if raw_search_key in current_user.username.lower() or raw_search_key in current_user.firstname.lower() or raw_search_key in current_user.lastname.lower() or raw_search_key in current_user.registrationdate.lower() or raw_search_key in current_user.role.lower():
+            if not current_user.isadmin and (raw_search_key in current_user.username.lower() or raw_search_key in current_user.firstname.lower() or raw_search_key in current_user.lastname.lower() or raw_search_key in current_user.registrationdate.lower() or raw_search_key in current_user.role.lower()):
                 search_results.append(current_user)
     
-    if user.username == "super_admin":  # Additional check if the current user is the super_admin
+    if user.username == "super_admin":  # super_admin can see other admins as well
         for admin_user in users:
-            if any(raw_search_key.lower() in str(getattr(admin_user, field, '')).lower() for field in vars(admin_user)):
-                # For super_admin, add other admins to the search results if the search key is in their fields
-                if admin_user.isadmin and admin_user not in search_results:
-                    search_results.append(admin_user)
+            if admin_user.isadmin and admin_user not in search_results and any(raw_search_key.lower() in str(getattr(admin_user, field, '')).lower() for field in vars(admin_user)):
+                search_results.append(admin_user)
+    
     
     return search_results
 
