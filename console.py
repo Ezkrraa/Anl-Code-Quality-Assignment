@@ -122,7 +122,7 @@ def add_member(user: db.User):
 
         # gender is a single character (normalized to uppercase)
         gender = input("Enter Gender (M, F, O): ").upper()
-        while len(gender) != 1:
+        while not (len(gender) == 1 and gender.isalpha()):
             print("Invalid Gender. Please enter again.")
             gender = input("Enter Gender: ").upper()
 
@@ -137,12 +137,12 @@ def add_member(user: db.User):
 
         # Prompt user for each field
         street_name = input("Enter Street Name: ")
-        house_number = input("Enter House Number: ")
-        while not re.match(r"\d+[a-z]{0,1}", house_number):
+        house_number = input("Enter House Number: ").lower()
+        while not re.match(r"\d+[a-z]{0,1}$", house_number):
             print("Invalid house number. House numbers may be a number plus an optional character (example: 2c)")
             house_number = input("Enter house number: ")
         zip_code = input("Enter Zip Code (DDDDXX): ").upper()
-        while not re.match(r"\d{4}[a-zA-Z]{2}", zip_code):
+        while not re.match(r"\d{4}[a-zA-Z]{2}$", zip_code):
             print("Invalid Zip Code. Please enter again.")
             zip_code = input("Enter Zip Code (DDDDXX): ").upper()
         print("Select a City:")
@@ -168,7 +168,7 @@ def add_member(user: db.User):
         phonenumber = input("Enter Phone Number: +31-6")
         while not re.match(r"^[0-9]{8}$", phonenumber):
             print("Invalid Phone Number. Please enter again.")
-            phonenumber = input("Enter Phone Number: ")
+            phonenumber = input("Enter Phone Number: +31-6")
 
         new_member = db.Member(
             firstname,
@@ -295,12 +295,9 @@ def show_member(user: db.User, member: db.Member) -> None:
                 return
             case 1:
                 edit_member(user, member)
-            case 3 if user.isadmin:
+            case 2 if user.isadmin:
                 confirm_options = ["No", "Yes"]
-                _, index = pick(
-                    options=confirm_options,
-                    title=f"Are you sure you want to delete {member.fullname()}'s account?",
-                )
+                _, index = pick(options=confirm_options, title=f"Are you sure you want to delete {member.fullname()}'s account?", indicator=">")
                 match index:
                     case 0:
                         show_message(f"Not deleting {member.firstname} {member.lastname}'s account.")
@@ -408,13 +405,7 @@ def edit_user(currentUser: db.User, user: db.User) -> None:
     select: int = 0
     old_user = copy.deepcopy(user)
     while True:
-        options = [
-            "Return without saving",
-            "Return and save",
-            f"Username: {user.username}",
-            f"First name: {user.firstname}",
-            f"Last name: {user.lastname}"
-        ]
+        options = ["Return without saving", "Return and save", f"Username: {user.username}", f"First name: {user.firstname}", f"Last name: {user.lastname}"]
         if currentUser.username == "super_admin":
             options.append(f"Is {'an' if user.isadmin else 'not an'} admin")
         result, index = pick(
@@ -460,7 +451,7 @@ def admin_menu(admin: db.User):
         show_logo()
         admin_options = [
             "Logout",
-            "Search members",
+            "Search members and consultants",
             "Show members",
             "Show consultants",
             "Add consultant",
@@ -508,7 +499,7 @@ def super_admin_menu():
     while True:
         su_admin_options = [
             "Logout",
-            "Search members",
+            "Search members and users",
             "Show members",
             "Show admins and consultants",
             "Add a member",
