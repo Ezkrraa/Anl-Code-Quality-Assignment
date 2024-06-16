@@ -479,7 +479,7 @@ def edit_user(admin: User, new_user: User, old_user: User):
     cur.execute("REPLACE INTO users VALUES(?,?,?,?,?,?,?,?)", new_user.toTuple())
     cur.close()
     database_connection.commit()
-    write_log_short(5, "User edited", f"Someone edited a user. Admin: {admin}, New user: {new_user}, Old user: {old_user}", True)
+    write_log_short(admin.username, 5, "User edited", f"Someone edited a user. Admin: {admin}, New user: {new_user}, Old user: {old_user}", True)
     return
 
 
@@ -496,7 +496,7 @@ def create_member(user: User, member: Member):
     cur = database_connection.cursor()
     cur.execute("INSERT INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.toTuple())
     database_connection.commit()
-    write_log_short(4, "Member created", f"Someone created a member. User: {user}, New member: {member}")
+    write_log_short(user.username, 4, "Member created", f"Someone created a member. User: {user}, New member: {member}")
 
 
 # admin and above can create a user
@@ -584,7 +584,7 @@ def get_all_members(user: User) -> list[Member]:
         write_log_short(user.username, 4, "Someone tried to get members without being a valid user", f"Someone attempted to get all members but wasn't a valid user. User details: {user}", True)
     cur = database_connection.cursor()
     members = cur.execute("SELECT * FROM members").fetchall()
-    write_log_short(5, "User fetched members", f"User {user.username} fetched all members. User details: {user}")
+    write_log_short(user.username, 5, "User fetched members", f"User {user.username} fetched all members. User details: {user}")
     return [Member.fromtuple(row) for row in members]
 
 
@@ -592,11 +592,11 @@ def get_all_users(user: User) -> list[User]:
     if not is_valid_user(user):
         write_log_short(user.username, 4, "Someone tried to get users without being a valid user", f"Someone attempted to get all users but wasn't a valid user. User details: {user}", True)
     cur = database_connection.cursor()
-    if admin.username == "super_admin":
+    if user.username == "super_admin":
         users = cur.execute("SELECT * FROM users").fetchall()
     else:
         users = cur.execute("SELECT * FROM users WHERE isadmin = 0 ORDER BY username").fetchall()
-    write_log_short(5, "Admin fetched users", f"Admin {admin.username} fetched all users. User details: {admin}")
+    write_log_short(user.username, 5, "Admin fetched users", f"Admin {user.username} fetched all users. User details: {user}")
     return [User.fromtuple(row) for row in users]
 
 
@@ -605,14 +605,14 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
 
     uname = uname.lower()
     if uname == "super_admin" and attemptPassword == "Admin_123?":
-        write_log_short(5, "Super admin login", "Someone logged in as super admin")
+        write_log_short(uname, 5, "Super admin login", "Someone logged in as super admin")
         return Exception("SuperAdmin")
 
     cursor = database_connection.cursor()
     output = cursor.execute("SELECT * FROM users WHERE username=?", (uname,)).fetchone()
 
     if output is None:
-        write_log_short(4, "Failed login", f"Failed attempt to log into account {uname}, which doesn't exist")
+        write_log_short(uname, 4, "Failed login", f"Failed attempt to log into account {uname}, which doesn't exist")
         return Exception("UserNotFound")
 
     usr: User = User.fromtuple(data=output)
@@ -620,7 +620,7 @@ def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
         write_log_short(uname, 6, "Failed login", f"Failed attempt to log into account {uname}")
         return Exception("WrongPassword")
     else:
-        write_log_short(5, "Successfull login", f"{uname} logged in successfully")
+        write_log_short(uname, 5, "Successfull login", f"{uname} logged in successfully")
         return usr
 
 
