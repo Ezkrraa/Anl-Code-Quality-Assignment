@@ -11,5 +11,4 @@ if __name__ == "__main__":
         db.seed_database()
     if db.database_connection.cursor().execute("SELECT * FROM users WHERE isadmin=0").fetchone() == None:
         db.create_test_admin()
-    # unlock_account("test")
     console.home_screen()
