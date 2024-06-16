@@ -763,31 +763,21 @@ def search_members_and_users(user: User, search_key: str) -> list[Union[User, Me
     cursor = database_connection.cursor()
     members = get_all_members(user)
     users = get_all_users(user)
-    raw_search_key = search_key.lower()  # Use raw search key for Python 'in' operations
+    raw_search_key = search_key.lower()
 
     search_results = []
     for member in members:
-        if (
-            raw_search_key in member.firstname.lower()
-            or raw_search_key in member.lastname.lower()
-            or raw_search_key in member.email.lower()
-            or raw_search_key in member.phonenumber.lower()
-            or raw_search_key in member.address.lower()
-            or raw_search_key == str(member.age)  # Ensure comparison is string to string
-            or raw_search_key in str(member.id)
-            or raw_search_key in member.registrationdate
-        ):
+        if any(raw_search_key in getattr(member, attr).lower() for attr in ['firstname', 'lastname', 'email', 'phonenumber', 'address', 'registrationdate']) or raw_search_key == str(member.age) or raw_search_key in str(member.id):
             search_results.append(member)
 
     if user.isadmin:  # Check if the current user is an admin
-        for current_user in users:  # Use a different variable name to avoid conflict
+        for current_user in users:
             # For admins, search among all users
             if raw_search_key in current_user.username.lower() or raw_search_key in current_user.firstname.lower() or raw_search_key in current_user.lastname.lower() or raw_search_key in current_user.registrationdate.lower() or raw_search_key in current_user.role.lower():
                 search_results.append(current_user)
     
     if user.username == "super_admin":  # Additional check if the current user is the super_admin
-        for admin_user in users:  # Use a different variable name to avoid conflict
-            # Check if search_key is in any of the admin_user's fields
+        for admin_user in users:
             if any(raw_search_key.lower() in str(getattr(admin_user, field, '')).lower() for field in vars(admin_user)):
                 # For super_admin, add other admins to the search results if the search key is in their fields
                 if admin_user.isadmin and admin_user not in search_results:
