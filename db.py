@@ -597,7 +597,7 @@ def edit_user(admin: User, new_user: User, old_user: User):
     cur.execute("REPLACE INTO users VALUES(?,?,?,?,?,?,?,?)", new_user.encrypt(load_public_key()).toTuple())
     cur.close()
     database_connection.commit()
-    write_log_short(admin.username, 5, "User edited", f"Someone edited a user. Admin: {admin}, New user: {new_user}, Old user: {old_user}", True)
+    write_log_short(admin.username, 5, "User edited", f"{admin.username} edited a user. Old user: {old_user.username} => New user: {new_user.username}", True)
     return
 
 
@@ -638,7 +638,7 @@ def create_user(admin: User, new_user: User):
         )
         return
     cur = database_connection.cursor()
-    cur.execute("INSERT INTO users VALUES(?,?,?,?,?,?,?,?)", new_user.toTuple())
+    cur.execute("INSERT INTO users VALUES(?,?,?,?,?,?,?,?)", new_user.encrypt(load_public_key()).toTuple())
     database_connection.commit()
 
 
@@ -824,7 +824,7 @@ def write_log_short(username: str, severity: int, desc: str, info: str, suspicio
 
 def write_log(logpoint: LogPoint):
     cursor = database_connection.cursor()
-    cursor.execute("INSERT INTO logs VALUES(?, ?, ?, ?, ?, ?, ?)", logpoint.toTuple())
+    cursor.execute("INSERT INTO logs VALUES(?, ?, ?, ?, ?, ?, ?)", logpoint.encrypt(load_public_key()).toTuple())
     cursor.close()
     database_connection.commit()
 
@@ -833,7 +833,7 @@ def get_all_logs(user: User) -> list[LogPoint]:
         write_log_short(user.username, 4, "Someone tried to get logs without being a valid user", f"Someone attempted to get all logs but wasn't a valid user. User details: {user}", True)
     cur = database_connection.cursor()
     logs = cur.execute("SELECT * FROM logs").fetchall()
-    return [LogPoint.fromtuple(row) for row in logs]
+    return [LogPoint.fromtuple(row).decrypt(load_private_key()) for row in logs]
 
 def create_backup(admin: User):
     # Updated to include hours and minutes for multiple backups per day
