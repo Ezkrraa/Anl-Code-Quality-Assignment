@@ -306,6 +306,7 @@ def setup_database() -> None:
     try:
         database_connection = sqlite3.connect("database.db")
     except sqlite3.Error as e:
+        # cannot log if no database connection
         raise Exception(f"Failed to connect to database, got error {e}")
     finally:
         if database_connection:
@@ -318,6 +319,7 @@ def setup_database() -> None:
             )
             return
         else:
+            # cannot log if no database connection
             raise Exception("Failed to connect to database, no connection was found")
 
 
@@ -456,7 +458,6 @@ def seed_database():
     cursor.close()
     database_connection.commit()
     write_log_short("", 6, "Seeded successfully", "Successfully seeded members and users tables")
-    create_test_admin()
 
 
 def gen_memberid() -> str:
