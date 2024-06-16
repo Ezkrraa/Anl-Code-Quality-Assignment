@@ -761,60 +761,40 @@ def search_members_and_users(user: User, search_key: str) -> list[Union[User, Me
         return []
 
     cursor = database_connection.cursor()
-    search_key = f"%{search_key.lower()}%"
+    members = get_all_members(user)
+    users = get_all_users(user)
+    raw_search_key = search_key.lower()  # Use raw search key for Python 'in' operations
 
-    member_query = """
-        SELECT 'member' as type, id, firstname, lastname, age, gender, weight, address, email, phonenumber, registrationdate
-        FROM members
-        WHERE LOWER(id) LIKE ?
-           OR LOWER(firstname) LIKE ?
-           OR LOWER(lastname) LIKE ?
-           OR LOWER(address) LIKE ?
-           OR LOWER(email) LIKE ?
-           OR LOWER(phonenumber) LIKE ?
-    """
+    search_results = []
+    for member in members:
+        if (
+            raw_search_key in member.firstname.lower()
+            or raw_search_key in member.lastname.lower()
+            or raw_search_key in member.email.lower()
+            or raw_search_key in member.phonenumber.lower()
+            or raw_search_key in member.address.lower()
+            or raw_search_key == str(member.age)  # Ensure comparison is string to string
+            or raw_search_key in str(member.id)
+            or raw_search_key in member.registrationdate
+        ):
+            search_results.append(member)
 
-    admin_query = """
-        SELECT 'user' as type, id, username, password, role, firstname, lastname, registrationdate, isadmin
-        FROM users
-        WHERE isadmin = 0 AND (
-           LOWER(id) LIKE ?
-           OR LOWER(username) LIKE ?
-           OR LOWER(firstname) LIKE ?
-           OR LOWER(lastname) LIKE ?
-           OR LOWER(registrationdate) LIKE ?
-        )
-    """
+    if user.isadmin:  # Check if the current user is an admin
+        for current_user in users:  # Use a different variable name to avoid conflict
+            # For admins, search among all users
+            if raw_search_key in current_user.username.lower() or raw_search_key in current_user.firstname.lower() or raw_search_key in current_user.lastname.lower() or raw_search_key in current_user.registrationdate.lower() or raw_search_key in current_user.role.lower():
+                search_results.append(current_user)
+    
+    if user.username == "super_admin":  # Additional check if the current user is the super_admin
+        for admin_user in users:  # Use a different variable name to avoid conflict
+            # Check if search_key is in any of the admin_user's fields
+            if any(raw_search_key.lower() in str(getattr(admin_user, field, '')).lower() for field in vars(admin_user)):
+                # For super_admin, add other admins to the search results if the search key is in their fields
+                if admin_user.isadmin and admin_user not in search_results:
+                    search_results.append(admin_user)
+    
+    return search_results
 
-    superadmin_query = """
-        SELECT 'user' as type, id, username, password, role, firstname, lastname, registrationdate, isadmin
-        FROM users
-        WHERE (
-            LOWER(id) LIKE ?
-            OR LOWER(username) LIKE ?
-            OR LOWER(firstname) LIKE ?
-            OR LOWER(lastname) LIKE ?
-            OR LOWER(registrationdate) LIKE ?
-        )
-    """
-
-    results = cursor.execute(member_query, [search_key] * 6).fetchall()
-
-    if user.isadmin:
-        user_results = cursor.execute(admin_query, [search_key] * 5).fetchall()
-        results.extend(user_results)
-
-    if user.isadmin and user.username == "super_admin":
-        user_results = cursor.execute(superadmin_query, [search_key] * 5).fetchall()
-        results.extend(user_results)
-
-    cursor.close()
-
-    members = [Member.fromtuple(row[1:]).decrypt(load_private_key()) for row in results if row[0] == "member"]
-    users = [User.fromtuple(row[1:]).decrypt(load_private_key()) for row in results if row[0] == "user"]
-    users.sort(key=(lambda x: x.isadmin))
-
-    return members + users
 
 
 def write_log_short(username: str, severity: int, desc: str, info: str, suspicious=False):

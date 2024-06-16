@@ -421,7 +421,7 @@ def admin_menu(admin: db.User):
             case 1:
                 clear_console()
                 query = input("Search for a member:")
-                show_search_menu(admin, query, role=1)
+                show_search_menu(admin, query)
             case 2:
                 show_members(admin)
             case 3:
@@ -461,7 +461,7 @@ def super_admin_menu():
             case 1:
                 clear_console()
                 query = input("Search for a member:")
-                show_search_menu(super_admin, query, role=2)
+                show_search_menu(super_admin, query)
             case 2:
                 show_members(super_admin)
             case 3:
@@ -529,7 +529,7 @@ def home_screen() -> None:
                 login_screen()
 
 
-def show_search_menu(currentUser: db.User, search_key: str, role: int = 0):
+def show_search_menu(currentUser: db.User, search_key: str):
     while True:
         clear_console()
         # search by search_key
