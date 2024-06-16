@@ -109,7 +109,7 @@ def add_member(user: db.User):
             age = input("Enter Age: ")
         age = int(age)
 
-        gender = input("Enter Gender: ").upper()
+        gender = input("Enter Gender (M, F, O): ").upper()
         while len(gender) != 1:
             print("Invalid Gender. Please enter again.")
             gender = input("Enter Gender: ").upper()
@@ -120,7 +120,32 @@ def add_member(user: db.User):
             weight = input("Enter Weight: ")
         weight = int(weight)
 
-        address = input("Enter Address: ")
+        cities = ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose"]
+
+        # Prompt user for each field
+        street_name = input("Enter Street Name: ")
+        house_number = input("Enter House Number: ")
+        while not re.match(r"\d+[a-z]{0,1}", house_number):
+            print("Invalid house number. House numbers may be a number plus an optional character (example: 2c)")
+            house_number = input("Enter house number: ")
+        zip_code = input("Enter Zip Code (DDDDXX): ").upper()
+        while not re.match(r"\d{4}[a-zA-Z]{2}", zip_code):
+            print("Invalid Zip Code. Please enter again.")
+            zip_code = input("Enter Zip Code (DDDDXX): ").upper()
+        print("Select a City:")
+        for i, city in enumerate(cities, start=1):
+            print(f"{i}. {city}")
+        while True:
+            try:
+                city_choice = int(input("Enter the number corresponding to your city: ")) - 1
+                if not 0 <= city_choice < len(cities):
+                    raise ValueError
+                break  # Exit loop if input is valid
+            except ValueError:
+                print("Invalid input. Please enter a valid number corresponding to your city.")
+        city = cities[city_choice]
+        # Combine the address components
+        address = f"{street_name}, {house_number}, {zip_code}, {city}"
 
         email = input("Enter Email: ")
         while not re.match(r"[^@]+@[^@]+\.[^@]+", email):
