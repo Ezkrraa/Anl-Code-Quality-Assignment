@@ -221,6 +221,16 @@ def change_password(usr: db.User):
         show_message("Password changed successfully.")
         break
 
+def reset_password(admin: db.User, user: db.User):
+    old_user = copy.deepcopy(user)
+    new_pw = f"TempPassword-{str(hex(rand.getrandbits(32))[2:])}"
+    new_crypt_pw = bcrypt.hashpw(new_pw.encode("utf-8"), bcrypt.gensalt())
+    user.password = new_crypt_pw
+    db.edit_user(admin, user, old_user)
+    show_message(f"Password reset for {user.username}. New password: {new_pw}")
+        
+
+
 
 def show_members(user: db.User) -> None:
     while True:
@@ -247,7 +257,7 @@ def show_member(user: db.User, member: db.Member) -> None:
                 return
             case 1:
                 edit_member(user, member)
-            case 2 if user.isadmin:
+            case 3 if user.isadmin:
                 confirm_options = ["No", "Yes"]
                 _, index = pick(
                     options=confirm_options,
@@ -321,7 +331,7 @@ def show_users(currentUser: db.User) -> None:
         clear_console()
         users: list[db.User] = db.get_all_users(currentUser)
         options = ["Return to main menu"]
-        options.extend([f"{users[i].username}" for i in range(len(users))])
+        options.extend([f"Role: {users[i].role} Username: {users[i].username}" for i in range(len(users))])
         selection, index = pick(options, title=f"{logo}\nUser menu", indicator=">")
         match index:
             case 0:
@@ -332,7 +342,7 @@ def show_users(currentUser: db.User) -> None:
 
 def show_user(currentUser: db.User, usr: db.User) -> None:
     while True:
-        options = ["Return", "Edit information", "Delete user"]
+        options = ["Return", "Edit information", "Delete user", "Reset password"]
         result, index = pick(options=options, title=f"{logo}User Info:\n{usr}", indicator=">")
         match index:
             case 0:
@@ -354,6 +364,9 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
                         db.delete_user(currentUser, usr)
                         show_message(f"Successfully deleted {usr.username}'s account.")
                         return
+            case 3:
+                reset_password(currentUser, usr)
+                return
             case _:
                 continue
 
