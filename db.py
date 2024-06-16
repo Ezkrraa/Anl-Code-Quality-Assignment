@@ -754,26 +754,20 @@ def search_members_and_users(user: User, search_key: str) -> list[Union[User, Me
     cursor = database_connection.cursor()
     members = get_all_members(user)
     users = get_all_users(user)
-    raw_search_key = search_key.lower()  # Use raw search key for Python 'in' operations
+    raw_search_key = search_key.lower()
 
     search_results = []
-    for member in members:
+    for member in members:  # Search among all members
         if (
-            raw_search_key in member.firstname.lower()
-            or raw_search_key in member.lastname.lower()
-            or raw_search_key in member.email.lower()
-            or raw_search_key in member.phonenumber.lower()
-            or raw_search_key in member.address.lower()
-            or raw_search_key == str(member.age)  # Ensure comparison is string to string
+            any(raw_search_key in getattr(member, attr).lower() for attr in ["firstname", "lastname", "email", "phonenumber", "address", "registrationdate"])
+            or raw_search_key == str(member.age)
             or raw_search_key in str(member.id)
-            or raw_search_key in member.registrationdate
         ):
             search_results.append(member)
 
-    if user.isadmin:  # Check if the current user is an admin
-        for current_user in users:  # Use a different variable name to avoid conflict
-            # For admins, search among all users
-            if (
+    if user.isadmin:  # Admins and super_admin can see members and normal users
+        for current_user in users:
+            if not current_user.isadmin and (
                 raw_search_key in current_user.username.lower()
                 or raw_search_key in current_user.firstname.lower()
                 or raw_search_key in current_user.lastname.lower()
@@ -781,6 +775,11 @@ def search_members_and_users(user: User, search_key: str) -> list[Union[User, Me
                 or raw_search_key in current_user.role.lower()
             ):
                 search_results.append(current_user)
+
+    if user.username == "super_admin":  # super_admin can see other admins as well
+        for admin_user in users:
+            if admin_user.isadmin and admin_user not in search_results and any(raw_search_key.lower() in str(getattr(admin_user, field, "")).lower() for field in vars(admin_user)):
+                search_results.append(admin_user)
 
     if user.username == "super_admin":  # Additional check if the current user is the super_admin
         for admin_user in users:  # Use a different variable name to avoid conflict
