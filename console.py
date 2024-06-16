@@ -403,6 +403,7 @@ def admin_menu(admin: db.User):
             "Show members",
             "Show consultants",
             "Add consultant",
+            "Show logs",
             "Change password",
         ]
         selection, index = pick(
@@ -425,6 +426,8 @@ def admin_menu(admin: db.User):
             case 4:
                 add_user(admin, False)
             case 5:
+                show_logs(admin)
+            case 6:
                 change_password(admin)
                 show_message("Changed password successfully.")
             case _:
@@ -442,7 +445,7 @@ def super_admin_menu():
         True,
     )
     while True:
-        su_admin_options = ["Logout", "Search members", "Show members", "Show admins and consultants", "Add a consultant", "Add an admin"]
+        su_admin_options = ["Logout", "Search members", "Show members", "Show admins and consultants", "Add a member", "Add a consultant", "Add an admin", "Show logs"]
         selection, index = pick(
             su_admin_options,
             title=f"{logo}\nSUPER ADMIN - MAIN MENU\nWelcome, super admin!",
@@ -461,11 +464,16 @@ def super_admin_menu():
             case 3:
                 show_users(super_admin)
             case 4:
+                clear_console()
                 add_member(super_admin)
             case 5:
+                clear_console()
                 add_user(super_admin, False)
             case 6:
+                clear_console()
                 add_user(super_admin, True)
+            case 7:
+                show_logs(super_admin)
             case _:
                 show_message("Invalid option.")
                 continue
@@ -540,6 +548,19 @@ def show_search_menu(currentUser: db.User, search_key: str, role: int = 0):
                 show_member(currentUser, selected_result)
             elif isinstance(selected_result, db.User):
                 show_user(currentUser, selected_result)
+    
+def show_logs(user: db.User) -> None:
+    while True:
+        clear_console()
+        options = ["Return", "ID - Timestamp - Username - Description - Info - Suspicious"]
+        logs = db.get_all_logs(user)
+        options.extend([f"{i} - {logs[i].timestamp.strftime('%Y-%m-%d %H:%M:%S')} - {logs[i].username} - {logs[i].description} - {logs[i].info} - {'Yes' if logs[i].suspicious else 'No'}" for i in range(len(logs))])
+        selection, index = pick(options, title=f"{logo}\nLogs menu", indicator=">")
+        match index:
+            case 0:
+                return
+            case _:
+                return
 
 
 def get_max(lst: list[Union[db.User, db.Member]]) -> int:
