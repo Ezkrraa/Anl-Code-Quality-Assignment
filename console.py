@@ -365,7 +365,7 @@ def edit_user(currentUser: db.User, user: db.User) -> None:
             f"Username: {user.username}",
         ]
         if currentUser.username == "super_admin":
-            options.extend(f"Is {'an' if user.isadmin else 'not an'} admin")
+            options.append(f"Is {'an' if user.isadmin else 'not an'} admin")
         result, index = pick(
             options=options,
             title=f"{logo}Edit member info:",
