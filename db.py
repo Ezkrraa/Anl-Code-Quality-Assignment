@@ -13,6 +13,10 @@ from faker import Faker
 # random, duhh
 from random import Random
 
+import shutil
+
+import os
+
 rand = Random()
 fake = Faker()
 database_connection: sqlite3.Connection
@@ -716,3 +720,32 @@ def get_all_logs(user: User) -> list[LogPoint]:
     cur = database_connection.cursor()
     logs = cur.execute("SELECT * FROM logs").fetchall()
     return [LogPoint.fromtuple(row) for row in logs]
+
+def create_backup(admin: User):
+    # Updated to include hours and minutes for multiple backups per day
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
+    backups_dir = os.path.join(os.getcwd(), "backups")
+    if not os.path.exists(backups_dir):
+        os.makedirs(backups_dir)
+    backup_filename = os.path.join(backups_dir, f"backup_{timestamp}.db")  # Include .db extension for clarity
+    try:
+        shutil.copyfile("database.db", backup_filename)
+        write_log_short(admin.username, 6, "Backup successful", f"Created backup at {backup_filename}")
+    except Exception as e:
+        write_log_short(admin.username, 4, "Backup failed", f"Failed to create backup at {backup_filename} due to error {e}")
+
+def restore_backup(admin: User, backup_date):
+    backup_filename = f"{os.getcwd()}/backups/{backup_date}"  # Adjusted to current working directory
+    if os.path.exists(backup_filename):
+        try:
+            shutil.copyfile(backup_filename, "database.db")
+            write_log_short(admin.username, 6, "Backup restored", f"Restored backup from {backup_filename}")
+        except Exception as e:
+            write_log_short(admin.username, 4, "Backup restore failed", f"Failed to restore backup from {backup_filename} due to error {e}")
+    else:
+        write_log_short(admin.username, 4, "Backup restore failed", f"Failed to restore backup from {backup_filename}")
+
+def show_backups():
+    backups_dir = os.path.join(os.getcwd(), "backups")  # Define the backups directory path
+    backups = [file for file in os.listdir(backups_dir) if file.startswith("backup_")]  # List only backup files from the /backups directory
+    return backups

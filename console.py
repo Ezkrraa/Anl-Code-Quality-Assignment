@@ -445,7 +445,7 @@ def super_admin_menu():
         True,
     )
     while True:
-        su_admin_options = ["Logout", "Search members", "Show members", "Show admins and consultants", "Add a member", "Add a consultant", "Add an admin", "Show logs"]
+        su_admin_options = ["Logout", "Search members", "Show members", "Show admins and consultants", "Add a member", "Add a consultant", "Add an admin", "Show logs", "Create/restore backups"]
         selection, index = pick(
             su_admin_options,
             title=f"{logo}\nSUPER ADMIN - MAIN MENU\nWelcome, super admin!",
@@ -474,6 +474,9 @@ def super_admin_menu():
                 add_user(super_admin, True)
             case 7:
                 show_logs(super_admin)
+            case 8:
+                clear_console()
+                backup_menu(super_admin)
             case _:
                 show_message("Invalid option.")
                 continue
@@ -571,3 +574,36 @@ def get_max(lst: list[Union[db.User, db.Member]]) -> int:
         elif isinstance(obj, db.User):
             max_len = max(max_len, len(f"{obj.role}: {obj.username}"))
     return max_len
+
+def backup_menu(admin: db.User):
+    while True:
+        clear_console()
+        options = ["Return", "Create backup", "Restore backup"]
+        selection, index = pick(options, title=f"{logo}\nBackup menu", indicator=">")
+        match index:
+            case 0:
+                return
+            case 1:
+                db.create_backup(admin)
+            case 2:
+                restore_backups(admin)
+            case _:
+                show_message("Invalid option.")
+
+def restore_backups(admin: db.User):
+    while True:
+        clear_console()
+        options = ["Return"]
+        backups = db.show_backups()
+        if backups is not None:
+            options.extend([f"{backups[i]}" for i in range(len(backups))])
+            selection, index = pick(options, title=f"{logo}\nRestore backup", indicator=">")
+            match index:
+                case 0:
+                    return
+                case _:
+                    db.restore_backup(admin, backups[cast(int, index) - 1])
+                    show_message(f"Restored backup {backups[cast(int, index) - 1]}")
+        else:
+            show_message("No backups available.")
+            return
