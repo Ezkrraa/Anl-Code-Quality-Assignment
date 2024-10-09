@@ -67,7 +67,7 @@ class LogPoint:
             self.info,
             self.suspicious,
         )
-    
+
     def __str__(self) -> str:
         return f"Name: {self.username}\n\
             Timestamp: {self.timestamp}\n\
@@ -839,7 +839,7 @@ def create_backup(admin: User):
         write_log_short(admin.username, 4, "Backup failed", f"Failed to create backup at {backup_filename} due to error {e}")
 
 
-def restore_backup(admin: User, backup_date):
+def restore_backup(admin: User, backup_date: str):
     backup_filename = f"{os.getcwd()}/backups/{backup_date}"  # Adjusted to current working directory
     if os.path.exists(backup_filename):
         try:

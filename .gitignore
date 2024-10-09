@@ -4,6 +4,7 @@
 # ignore dbs
 *.db
 *.db.bak
+*.db.zip
 
 # ignore keys
 *.pem
