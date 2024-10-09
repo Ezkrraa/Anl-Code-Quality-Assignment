@@ -60,17 +60,17 @@ def clear_console():
 
 
 def is_valid_input_str(pattern: str, input_value: str) -> bool:
-     # Check if input exceeds maximum allowed length
+    # Check if input exceeds maximum allowed length
     if len(input_value) > 50:
         print(f"Input exceeds maximum allowed length of 50 characters.")
         return False
-    
+
     # Check if input contains a null byte
-    if '\x00' in input_value:
+    if "\x00" in input_value:
         db.write_log_short(db.User.username, 2, "Input contains a null byte, which is not allowed.", "Null byte is not allowed in input.", True)
         print("Input contains a null byte, which is not allowed.")
         return False
-    
+
     return bool(re.match(pattern, input_value))
 
 
@@ -79,20 +79,17 @@ def validate_int(number: str, min: int, max: int) -> bool:
         print(f"Input exceeds maximum allowed length of 50 characters.")
         return False
 
-    if '\x00' in number:
+    if "\x00" in number:
         db.write_log_short(db.User.username, 2, "Input contains a null byte, which is not allowed.", "Null byte is not allowed in input.", True)
         print("Input contains a null byte, which is not allowed.")
         return False
-    
+
     try:
         number_int = int(number)
         return bool(min <= number_int <= max)
     except:
         print(f"The input was not a valid number")
         return False
-
-        
-
 
 
 def to_main_menu(usr: db.User):
@@ -158,13 +155,13 @@ def add_member(user: db.User):
 
         # gender is a single character (normalized to uppercase)
         gender = input("Enter Gender (M, F, O): ").upper()
-        while (gender != "M" and gender != "F" and gender != "O"):
+        while gender != "M" and gender != "F" and gender != "O":
             print("Invalid Gender. Please enter again.")
             gender = input("Enter Gender (M, F, O): ").upper()
 
         weight = input("Enter Weight: ")
         # human weight is between 0 and 700 (kg, exclusive)
-        while not validate_int(weight, 0 , 700):
+        while not validate_int(weight, 0, 700):
             print("Invalid Weight. Please enter again.")
             weight = input("Enter Weight: ")
         weight = int(weight)
@@ -342,7 +339,8 @@ def show_member(user: db.User, member: db.Member) -> None:
                         db.delete_member(user, member)
                         show_message(f"Successfully deleted {member.firstname} {member.lastname}'s account.")
                         return
-                    
+
+
 def show_log(log: db.LogPoint) -> None:
     while True:
         options = ["Return"]
@@ -350,7 +348,6 @@ def show_log(log: db.LogPoint) -> None:
         match index:
             case 0:
                 return
-
 
 
 def edit_member(user: db.User, member: db.Member):
@@ -619,6 +616,7 @@ def login_screen() -> None:
     show_message("Failed to login thrice, returning to main menu")
     db.write_log_short(uname, 5, "Failed to login thrice.", "Failed to login thrice.", True)
 
+
 def home_screen() -> None:
     while True:
         clear_console()
@@ -675,8 +673,12 @@ def show_logs(user: db.User) -> None:
             ]
         )
         selection, index = pick(options, title=f"{logo}\nLogs menu", indicator=">")
-        if index is int:
-            return show_log(logs[index])
+        if isinstance(index, int):
+            if index == 0:
+                return
+            if index > 1:  # to prevent them from selecting -1
+                show_log(logs[index - 2])
+            continue
         return
 
 
