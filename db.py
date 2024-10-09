@@ -594,11 +594,11 @@ def create_member(user: User, member: Member):
     cur = database_connection.cursor()
     cur.execute("INSERT INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", member.encrypt(load_public_key()).toTuple())
     database_connection.commit()
-    write_log_short(user.username, 4, "Member created", f"Someone created a member. New member: {member.fullname()}")
+    write_log_short(user.username, 4, "Member created", f"{user.username} created a member. New member: {member.fullname()}")
 
 
 # admin and above can create a user
-def create_user(admin: User, new_user: User):
+def create_user(admin: User, new_user: User) -> Union[Exception, None]:
     if not (is_valid_user(admin) and admin.isadmin):
         write_log_short(
             admin.username,
@@ -607,7 +607,7 @@ def create_user(admin: User, new_user: User):
             f"Someone attempted to create a user without being a valid user. Admin: {admin.username}",
             True,
         )
-        return
+        return Exception("PrivilegeError")
     if new_user.isadmin and admin.username != "super_admin":
         write_log_short(
             admin.username,
@@ -616,10 +616,22 @@ def create_user(admin: User, new_user: User):
             f"Someone attempted to create an admin without being super admin. User: {new_user.username}",
             True,
         )
-        return
+        return Exception("PrivilegeError")
     cur = database_connection.cursor()
+    cur.execute("SELECT * FROM users WHERE username = ? LIMIT 1", (new_user.username,))
+    user = cur.fetchone()
+    if user == None:
+        write_log_short(
+            admin.username,
+            4,
+            "Someone tried to create an existing user",
+            f"Someone attempted to create an admin with a name that already exists. User: {new_user.username}",
+            True,
+        )
+        return Exception("DuplicateError")
     cur.execute("INSERT INTO users VALUES(?,?,?,?,?,?,?,?)", new_user.encrypt(load_public_key()).toTuple())
     database_connection.commit()
+    write_log_short(admin.username, 5, "Admin created user", f"User {admin.username} created {new_user.role} {new_user.username}")
 
 
 def delete_user(admin: User, user: User) -> bool:

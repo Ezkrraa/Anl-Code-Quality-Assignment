@@ -258,7 +258,16 @@ def add_user(admin: db.User, make_admin: bool = False):
             isadmin=make_admin,
             uid=uuid4().bytes,
         )
-        db.create_user(admin, new_consultant)
+        result = db.create_user(admin, new_consultant)
+        if isinstance(result, Exception):
+            match (str(result)):
+                case "DuplicateError":
+                    show_message("A user with this username already exists.")
+                case "PrivilegeError":
+                    show_message("You are not a valid admin.")
+                case _:
+                    show_message(f"Error: {result}")
+            break
         show_message(f"Created {'admin' if make_admin else 'consultant'} with the password {temp_pw}.")
         break
 
