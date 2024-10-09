@@ -27,6 +27,8 @@ import copy
 # for backups
 import os, shutil
 
+import zipfile
+
 
 rand = Random()
 fake = Faker()
@@ -65,6 +67,16 @@ class LogPoint:
             self.info,
             self.suspicious,
         )
+    
+    def __str__(self) -> str:
+        return f"Name: {self.username}\n\
+            Timestamp: {self.timestamp}\n\
+            Username: {self.username}\n\
+            Severity: {self.severity}\n\
+            Description: {self.description}\n\
+            Info: {self.info}\n\
+            Suspicious: {'Yes' if self.suspicious else 'No'}\n\
+            "
 
     def encrypt(self, key):
         new_log = copy.deepcopy(self)
@@ -169,6 +181,7 @@ class User:
     def encrypt(self, key):
         new_user = User.fromtuple(self.toTuple())
         new_user.username = encrypt_data(key, self.username.encode())
+        new_user.role = encrypt_data(key, self.role.encode())
         new_user.firstname = encrypt_data(key, self.firstname.encode())
         new_user.lastname = encrypt_data(key, self.lastname.encode())
         return new_user
@@ -176,6 +189,7 @@ class User:
     def decrypt(self, key):
         new_user = User.fromtuple(self.toTuple())
         new_user.username = decrypt_data(key, self.username)
+        new_user.role = decrypt_data(key, self.role)
         new_user.firstname = decrypt_data(key, self.firstname)
         new_user.lastname = decrypt_data(key, self.lastname)
         return new_user
@@ -819,8 +833,8 @@ def create_backup(admin: User):
         os.makedirs(backups_dir)
     backup_filename = os.path.join(backups_dir, f"backup_{timestamp}.db")  # Include .db extension for clarity
     try:
-        shutil.copyfile("database.db", backup_filename)
         write_log_short(admin.username, 6, "Backup successful", f"Created backup at {backup_filename}")
+        zipfile.ZipFile(f"{backup_filename}.zip", "w").write("./database.db")
     except Exception as e:
         write_log_short(admin.username, 4, "Backup failed", f"Failed to create backup at {backup_filename} due to error {e}")
 
@@ -829,7 +843,7 @@ def restore_backup(admin: User, backup_date):
     backup_filename = f"{os.getcwd()}/backups/{backup_date}"  # Adjusted to current working directory
     if os.path.exists(backup_filename):
         try:
-            shutil.copyfile(backup_filename, "database.db")
+            zipfile.ZipFile(f"{backup_filename}", "r").extractall()
             write_log_short(admin.username, 6, "Backup restored", f"Restored backup from {backup_filename}")
         except Exception as e:
             write_log_short(admin.username, 4, "Backup restore failed", f"Failed to restore backup from {backup_filename} due to error {e}")

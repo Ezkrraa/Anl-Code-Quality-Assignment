@@ -59,6 +59,42 @@ def clear_console():
             os.system("clear")
 
 
+def is_valid_input_str(pattern: str, input_value: str) -> bool:
+     # Check if input exceeds maximum allowed length
+    if len(input_value) > 50:
+        print(f"Input exceeds maximum allowed length of 50 characters.")
+        return False
+    
+    # Check if input contains a null byte
+    if '\x00' in input_value:
+        db.write_log_short(db.User.username, 2, "Input contains a null byte, which is not allowed.", "Null byte is not allowed in input.", True)
+        print("Input contains a null byte, which is not allowed.")
+        return False
+    
+    return bool(re.match(pattern, input_value))
+
+
+def validate_int(number: str, min: int, max: int) -> bool:
+    if len(number) > 50:
+        print(f"Input exceeds maximum allowed length of 50 characters.")
+        return False
+
+    if '\x00' in number:
+        db.write_log_short(db.User.username, 2, "Input contains a null byte, which is not allowed.", "Null byte is not allowed in input.", True)
+        print("Input contains a null byte, which is not allowed.")
+        return False
+    
+    try:
+        number_int = int(number)
+        return bool(min <= number_int <= max)
+    except:
+        print(f"The input was not a valid number")
+        return False
+
+        
+
+
+
 def to_main_menu(usr: db.User):
     if usr.isadmin:
         admin_menu(usr)
@@ -103,32 +139,32 @@ def user_menu(usr: db.User):
 def add_member(user: db.User):
     while True:
         firstname = input("Enter First Name: ")
-        while not re.match("^[A-Za-z]*$", firstname):
+        while not is_valid_input_str(r"^[A-Za-z]*$", firstname):
             print("Invalid First Name. Please enter again.")
             firstname = input("Enter First Name: ")
 
         # names are alpha
         lastname = input("Enter Last Name: ")
-        while not re.match("^[A-Za-z]*$", lastname):
+        while not is_valid_input_str(r"^[A-Za-z]*$", lastname):
             print("Invalid Last Name. Please enter again.")
             lastname = input("Enter Last Name: ")
 
         # age is between 0 and 100 (exclusive)
         age = input("Enter Age: ")
-        while not (age.isdigit() and 0 < int(age) < 100):
+        while not validate_int(age, 18, 100):
             print("Invalid Age. Please enter again.")
             age = input("Enter Age: ")
         age = int(age)
 
         # gender is a single character (normalized to uppercase)
         gender = input("Enter Gender (M, F, O): ").upper()
-        while not (len(gender) == 1 and gender.isalpha()):
+        while (gender != "M" and gender != "F" and gender != "O"):
             print("Invalid Gender. Please enter again.")
-            gender = input("Enter Gender: ").upper()
+            gender = input("Enter Gender (M, F, O): ").upper()
 
         weight = input("Enter Weight: ")
         # human weight is between 0 and 700 (kg, exclusive)
-        while not (weight.isdigit() and 0 < int(weight) < 700):
+        while not validate_int(weight, 0 , 700):
             print("Invalid Weight. Please enter again.")
             weight = input("Enter Weight: ")
         weight = int(weight)
@@ -137,12 +173,15 @@ def add_member(user: db.User):
 
         # Prompt user for each field
         street_name = input("Enter Street Name: ")
+        while not is_valid_input_str(r"^[A-Za-z]*$", street_name):
+            print("Invalid Street Name. Please enter again.")
+            street_name = input("Enter Street Name: ")
         house_number = input("Enter House Number: ").lower()
-        while not re.match(r"\d+[a-z]{0,1}$", house_number):
+        while not is_valid_input_str(r"\d+[a-z]{0,1}$", house_number):
             print("Invalid house number. House numbers may be a number plus an optional character (example: 2c)")
             house_number = input("Enter house number: ")
         zip_code = input("Enter Zip Code (DDDDXX): ").upper()
-        while not re.match(r"\d{4}[a-zA-Z]{2}$", zip_code):
+        while not is_valid_input_str(r"\d{4}[a-zA-Z]{2}$", zip_code):
             print("Invalid Zip Code. Please enter again.")
             zip_code = input("Enter Zip Code (DDDDXX): ").upper()
         print("Select a City:")
@@ -161,12 +200,12 @@ def add_member(user: db.User):
         address = f"{street_name}, {house_number}, {zip_code}, {city}"
 
         email = input("Enter Email: ")
-        while not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        while not is_valid_input_str(r"[^@]+@[^@]+\.[^@]+", email):
             print("Invalid Email. Please enter again.")
             email = input("Enter Email: ")
 
         phonenumber = input("Enter Phone Number: +31-6")
-        while not re.match(r"^[0-9]{8}$", phonenumber):
+        while not is_valid_input_str(r"^[0-9]{8}$", phonenumber):
             print("Invalid Phone Number. Please enter again.")
             phonenumber = input("Enter Phone Number: +31-6")
 
@@ -189,7 +228,7 @@ def add_member(user: db.User):
 def add_user(admin: db.User, make_admin: bool = False):
     while True:
         username = input("Enter Username: ").lower()
-        while not re.match(r"^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", username):
+        while not is_valid_input_str(r"^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", username):
             print("Invalid Username. Please enter again.")
             print("Username must be unique and have a length of at least 8 characters")
             print("Must be no longer than 10 characters")
@@ -199,12 +238,12 @@ def add_user(admin: db.User, make_admin: bool = False):
             username = input("Enter Username: ")
 
         first_name = input("Enter First Name: ").title()
-        while not re.match("^[A-Za-z]*$", first_name):
+        while not is_valid_input_str(r"^[A-Za-z]*$", first_name):
             print("Invalid First Name. Please enter again.")
             first_name = input("Enter First Name: ").title()
 
         last_name = input("Enter Last Name: ").title()
-        while not re.match("^[A-Za-z]*$", last_name):
+        while not is_valid_input_str(r"^[A-Za-z]*$", last_name):
             print("Invalid Last Name. Please enter again.")
             last_name = input("Enter Last Name: ").title()
 
@@ -215,7 +254,7 @@ def add_user(admin: db.User, make_admin: bool = False):
                 temp_pw.encode("utf-8"),
                 bcrypt.gensalt(),
             ),
-            role={"Consultant" if not make_admin else "Admin"},
+            role="Consultant" if not make_admin else "Admin",
             fname=first_name,
             lname=last_name,
             regdate=datetime.date.today(),
@@ -239,10 +278,7 @@ def change_password(usr: db.User):
             continue
         print("Enter your new password:")
         new_pw = getpass("> ")
-        while not re.match(
-            pattern=r"^(?=.*[A-Z].*[a-z].*[\d].*[!@#$%^&*()_+={}\[\]:;'\"?,.<>\/-]).{12,30}$",
-            string=new_pw,
-        ):
+        while not is_valid_input_str(r"^(?=.*[A-Z].*[a-z].*[\d].*[!@#$%^&*()_+={}\[\]:;'\"?,.<>\/-]).{12,30}$", new_pw):
             print("Invalid Password. Please enter again.")
             print("Password must have a length of at least 12 characters")
             print("Must be no longer than 30 characters")
@@ -306,6 +342,15 @@ def show_member(user: db.User, member: db.Member) -> None:
                         db.delete_member(user, member)
                         show_message(f"Successfully deleted {member.firstname} {member.lastname}'s account.")
                         return
+                    
+def show_log(log: db.LogPoint) -> None:
+    while True:
+        options = ["Return"]
+        result, index = pick(options=options, title=f"{logo}Log Info:\n{log}", indicator=">")
+        match index:
+            case 0:
+                return
+
 
 
 def edit_member(user: db.User, member: db.Member):
@@ -422,7 +467,7 @@ def edit_user(currentUser: db.User, user: db.User) -> None:
                 break
             case 2:
                 user.username = input("Enter Username: ")
-                while not re.match(r"^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", user.username):
+                while not is_valid_input_str(r"^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", user.username):
                     print("Invalid Username. Please enter again.")
                     print("Username must be unique and have a length of at least 8 characters")
                     print("Must be no longer than 10 characters")
@@ -432,12 +477,12 @@ def edit_user(currentUser: db.User, user: db.User) -> None:
                     user.username = input("Enter Username: ")
             case 3:
                 user.firstname = input("Enter First Name: ").title()
-                while not re.match("^[A-Za-z]*$", user.firstname):
+                while not is_valid_input_str(r"^[A-Za-z]*$", user.firstname):
                     print("Invalid First Name. Please enter again.")
                     user.firstname = input("Enter First Name: ").title()
             case 4:
                 user.lastname = input("Enter Last Name: ").title()
-                while not re.match("^[A-Za-z]*$", user.lastname):
+                while not is_valid_input_str(r"^[A-Za-z]*$", user.lastname):
                     print("Invalid Last Name. Please enter again.")
                     user.lastname = input("Enter Last Name: ").title()
             case 5 if currentUser.username == "super_admin":
@@ -456,6 +501,7 @@ def admin_menu(admin: db.User):
             "Show consultants",
             "Add consultant",
             "Show logs",
+            "Create/restore backups",
             "Change password",
         ]
         selection, index = pick(
@@ -480,6 +526,9 @@ def admin_menu(admin: db.User):
             case 5:
                 show_logs(admin)
             case 6:
+                clear_console()
+                backup_menu(admin)
+            case 7:
                 change_password(admin)
                 show_message("Changed password successfully.")
             case _:
@@ -566,8 +615,9 @@ def login_screen() -> None:
                 return
             case e if isinstance(e, Exception):
                 show_message(str(attempt))
-    show_message("Failed to login thrice, returning to main menu")
 
+    show_message("Failed to login thrice, returning to main menu")
+    db.write_log_short(uname, 5, "Failed to login thrice.", "Failed to login thrice.", True)
 
 def home_screen() -> None:
     while True:
@@ -625,11 +675,9 @@ def show_logs(user: db.User) -> None:
             ]
         )
         selection, index = pick(options, title=f"{logo}\nLogs menu", indicator=">")
-        match index:
-            case 0:
-                return
-            case _:
-                return
+        if index is int:
+            return show_log(logs[index])
+        return
 
 
 def get_max(lst: list[Union[db.User, db.Member]]) -> int:
