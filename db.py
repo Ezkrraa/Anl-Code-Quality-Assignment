@@ -617,10 +617,9 @@ def create_user(admin: User, new_user: User) -> Union[Exception, None]:
             True,
         )
         return Exception("PrivilegeError")
-    cur = database_connection.cursor()
-    cur.execute("SELECT * FROM users WHERE username = ? LIMIT 1", (new_user.username,))
-    user = cur.fetchone()
-    if user == None:
+    users = get_all_users(admin)
+
+    if any([user.username == new_user.username for user in users]):
         write_log_short(
             admin.username,
             4,
@@ -629,6 +628,7 @@ def create_user(admin: User, new_user: User) -> Union[Exception, None]:
             True,
         )
         return Exception("DuplicateError")
+    cur = database_connection.cursor()
     cur.execute("INSERT INTO users VALUES(?,?,?,?,?,?,?,?)", new_user.encrypt(load_public_key()).toTuple())
     database_connection.commit()
     write_log_short(admin.username, 5, "Admin created user", f"User {admin.username} created {new_user.role} {new_user.username}")
@@ -758,7 +758,11 @@ def is_valid_user(user: User) -> bool:
     if user.username == "super_admin":
         return True
     cursor = database_connection.cursor()
-    check_user = User.fromtuple(cursor.execute("SELECT * FROM users WHERE id=?", (user.id.bytes,)).fetchone()).decrypt(load_private_key())
+
+    tuple = cursor.execute("SELECT * FROM users WHERE id=?", (user.id.bytes,)).fetchone()
+    if tuple == None:
+        return False
+    check_user = User.fromtuple(tuple).decrypt(load_private_key())
     if check_user == None:
         return False
     return user.__eq__(check_user)
@@ -838,6 +842,9 @@ def get_all_logs(user: User) -> list[LogPoint]:
 
 
 def create_backup(admin: User):
+    if not is_valid_user(admin) or not admin.isadmin:
+        write_log_short(admin.username, 3, "Invalid user", f"Someone tried to create a backup without being a valid admin. User: {admin.username}", True)
+        return False
     # Updated to include hours and minutes for multiple backups per day
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
     backups_dir = os.path.join(os.getcwd(), "backups")
@@ -851,19 +858,25 @@ def create_backup(admin: User):
         write_log_short(admin.username, 4, "Backup failed", f"Failed to create backup at {backup_filename} due to error {e}")
 
 
-def restore_backup(admin: User, backup_date: str):
+def restore_backup(admin: User, backup_date: str) -> bool:
+    if not is_valid_user(admin) or not admin.isadmin:
+        write_log_short(admin.username, 3, "Invalid user", f"Someone tried to restore a backup without being a valid admin. User: {admin.username}", True)
+        return False
     backup_filename = f"{os.getcwd()}/backups/{backup_date}"  # Adjusted to current working directory
     if os.path.exists(backup_filename):
         try:
             zipfile.ZipFile(f"{backup_filename}", "r").extractall()
             write_log_short(admin.username, 6, "Backup restored", f"Restored backup from {backup_filename}")
+            return True
         except Exception as e:
             write_log_short(admin.username, 4, "Backup restore failed", f"Failed to restore backup from {backup_filename} due to error {e}")
+            return False
     else:
         write_log_short(admin.username, 4, "Backup restore failed", f"Failed to restore backup from {backup_filename}")
+        return False
 
 
 def show_backups():
     backups_dir = os.path.join(os.getcwd(), "backups")  # Define the backups directory path
-    backups = [file for file in os.listdir(backups_dir) if file.startswith("backup_")]  # List only backup files from the /backups directory
+    backups = [file for file in os.listdir(backups_dir) if file.startswith("backup_") and file.endswith(".db.zip")]  # List only backup files from the /backups directory
     return backups

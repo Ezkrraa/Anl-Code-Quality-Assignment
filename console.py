@@ -37,6 +37,8 @@ logo = """
              made by Lucas de Haas (1061095), Ezra van der Kolk (1052307) and Tommy Tran (1061590)
 """
 
+cities = ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose"]
+
 
 def show_logo() -> None:
     print(logo)
@@ -60,30 +62,10 @@ def clear_console():
 
 
 def is_valid_input_str(pattern: str, input_value: str) -> bool:
-    # Check if input exceeds maximum allowed length
-    if len(input_value) > 50:
-        print(f"Input exceeds maximum allowed length of 50 characters.")
-        return False
-
-    # Check if input contains a null byte
-    if "\x00" in input_value:
-        db.write_log_short(db.User.username, 2, "Input contains a null byte, which is not allowed.", "Null byte is not allowed in input.", True)
-        print("Input contains a null byte, which is not allowed.")
-        return False
-
     return bool(re.match(pattern, input_value))
 
 
 def validate_int(number: str, min: int, max: int) -> bool:
-    if len(number) > 50:
-        print(f"Input exceeds maximum allowed length of 50 characters.")
-        return False
-
-    if "\x00" in number:
-        db.write_log_short(db.User.username, 2, "Input contains a null byte, which is not allowed.", "Null byte is not allowed in input.", True)
-        print("Input contains a null byte, which is not allowed.")
-        return False
-
     try:
         number_int = int(number)
         return bool(min <= number_int <= max)
@@ -165,8 +147,6 @@ def add_member(user: db.User):
             print("Invalid Weight. Please enter again.")
             weight = input("Enter Weight: ")
         weight = int(weight)
-
-        cities = ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose"]
 
         # Prompt user for each field
         street_name = input("Enter Street Name: ")
@@ -380,34 +360,66 @@ def edit_member(user: db.User, member: db.Member):
             case 1:
                 db.edit_member(user, member)
                 break
+            case 7:
+                clear_console()
+                street_name = input("Enter Street Name: ")
+                while not is_valid_input_str(r"^[A-Za-z]*$", street_name):
+                    print("Invalid Street Name. Please enter again.")
+                    street_name = input("Enter Street Name: ")
+                house_number = input("Enter House Number: ").lower()
+                while not is_valid_input_str(r"\d+[a-z]{0,1}$", house_number):
+                    print("Invalid house number. House numbers may be a number plus an optional character (example: 2c)")
+                    house_number = input("Enter house number: ")
+                zip_code = input("Enter Zip Code (DDDDXX): ").upper()
+                while not is_valid_input_str(r"\d{4}[a-zA-Z]{2}$", zip_code):
+                    print("Invalid Zip Code. Please enter again.")
+                    zip_code = input("Enter Zip Code (DDDDXX): ").upper()
+                print("Select a City:")
+                for i, city in enumerate(cities, start=1):
+                    print(f"{i}. {city}")
+                while True:
+                    try:
+                        city_choice = int(input("Enter the number corresponding to your city: ")) - 1
+                        if not 0 <= city_choice < len(cities):
+                            raise ValueError
+                        break  # Exit loop if input is valid
+                    except ValueError:
+                        print("Invalid input. Please enter a valid number corresponding to your city.")
+                member.address = f"{street_name}, {house_number}, {zip_code}, {city}"
+            case 9:
+                new_value = input("Enter new value: +31-6")
+                member = change_member(7, member, new_value)
             case _:
-                member = change_member(cast(int, index) - 2, member, input("Enter new value:"))
+                clear_console()
+                new_value = input("Enter new value:")
+                member = change_member(cast(int, index) - 2, member, new_value) if new_value != "" else member
 
 
 def change_member(index: int, member: db.Member, new_value: str) -> db.Member:
     match index:
         case 0:
-            member.firstname = new_value
+            if is_valid_input_str(r"^[A-Za-z]*$", new_value):
+                member.firstname = new_value
         case 1:
-            member.lastname = new_value
+            if is_valid_input_str(r"^[A-Za-z]*$", new_value):
+                member.lastname = new_value
         case 2:
-            try:
+            if validate_int(new_value, 18, 100):
                 member.age = int(new_value)
-            except ValueError:
-                return member
         case 3:
-            member.gender = new_value
+            if new_value != "M" and new_value != "F" and new_value != "O":
+                member.gender = new_value  #
         case 4:
-            try:
+            if validate_int(new_value, 0, 600):
                 member.weight = int(new_value)
-            except ValueError:
-                return member
         case 5:
             member.address = new_value
         case 6:
-            member.email = new_value
+            if is_valid_input_str(r"[^@]+@[^@]+\.[^@]+", new_value):
+                member.email = new_value
         case 7:
-            member.phonenumber = new_value
+            if is_valid_input_str(r"^[0-9]{8}$", new_value):
+                member.phonenumber = "+31-6" + new_value
     return member
 
 
@@ -711,6 +723,7 @@ def backup_menu(admin: db.User):
                 return
             case 1:
                 db.create_backup(admin)
+                show_message("Backup created successfully.")
             case 2:
                 restore_backups(admin)
             case _:
@@ -729,8 +742,11 @@ def restore_backups(admin: db.User):
                 case 0:
                     return
                 case _:
-                    db.restore_backup(admin, backups[cast(int, index) - 1])
-                    show_message(f"Restored backup {backups[cast(int, index) - 1]}")
+                    restore_success = db.restore_backup(admin, backups[cast(int, index) - 1])
+                    if restore_success:
+                        show_message(f"Restored backup {backups[cast(int, index) - 1]}")
+                    else:
+                        show_message(f"Could not restore backup")
         else:
             show_message("No backups available.")
             return
