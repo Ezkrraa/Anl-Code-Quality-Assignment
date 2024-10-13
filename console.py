@@ -410,7 +410,7 @@ def change_member(index: int, member: db.Member, new_value: str) -> db.Member:
                 member.age = int(new_value)
         case 3:
             if new_value == "M" or new_value == "F" or new_value == "O":
-                member.gender = new_value  
+                member.gender = new_value
         case 4:
             if validate_int(new_value, 0, 600):
                 member.weight = int(new_value)
@@ -447,7 +447,7 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
             case 0:
                 break
             case 1:
-                edit_user(currentUser, usr)
+                usr = edit_user(currentUser, usr)
             case 2:
                 confirm_options = ["No", "Yes"]
                 _, index = pick(options=confirm_options, title=f"Are you sure you want to delete {usr.username}'s account?", indicator=">")
@@ -466,13 +466,13 @@ def show_user(currentUser: db.User, usr: db.User) -> None:
                 continue
 
 
-def edit_user(currentUser: db.User, user: db.User) -> None:
+def edit_user(currentUser: db.User, user: db.User) -> db.User:
     select: int = 0
-    old_user = copy.deepcopy(user)
+    new_user = copy.deepcopy(user)
     while True:
-        options = ["Return without saving", "Return and save", f"Username: {user.username}", f"First name: {user.firstname}", f"Last name: {user.lastname}"]
+        options = ["Return without saving", "Return and save", f"Username: {new_user.username}", f"First name: {new_user.firstname}", f"Last name: {new_user.lastname}"]
         if currentUser.username == "super_admin":
-            options.append(f"Is {'an' if user.isadmin else 'not an'} admin")
+            options.append(f"Is {'an' if new_user.isadmin else 'not an'} admin")
         result, index = pick(
             options=options,
             title=f"{logo}Edit user info:",
@@ -481,34 +481,34 @@ def edit_user(currentUser: db.User, user: db.User) -> None:
         )
         match index:
             case 0:
-                break
+                return user
             case 1:
-                db.edit_user(currentUser, user, old_user)
-                break
+                db.edit_user(currentUser, new_user, user)
+                return new_user
             case 2:
-                user.username = input("Enter Username: ")
-                while not is_valid_input_str(r"^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", user.username):
+                new_user.username = input("Enter Username: ")
+                while not is_valid_input_str(r"^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", new_user.username):
                     print("Invalid Username. Please enter again.")
                     print("Username must be unique and have a length of at least 8 characters")
                     print("Must be no longer than 10 characters")
                     print("Must be started with a letter or underscores (_)")
                     print("Can contain letters (a-z), numbers (0-9), underscores (_), apostrophes ('), and periods (.)")
                     print("No distinguish between lowercase or uppercase letters")
-                    user.username = input("Enter Username: ")
+                    new_user.username = input("Enter Username: ")
             case 3:
-                user.firstname = input("Enter First Name: ").title()
-                while not is_valid_input_str(r"^[A-Za-z]*$", user.firstname):
+                new_user.firstname = input("Enter First Name: ").title()
+                while not is_valid_input_str(r"^[A-Za-z]*$", new_user.firstname):
                     print("Invalid First Name. Please enter again.")
-                    user.firstname = input("Enter First Name: ").title()
+                    new_user.firstname = input("Enter First Name: ").title()
             case 4:
-                user.lastname = input("Enter Last Name: ").title()
-                while not is_valid_input_str(r"^[A-Za-z]*$", user.lastname):
+                new_user.lastname = input("Enter Last Name: ").title()
+                while not is_valid_input_str(r"^[A-Za-z]*$", new_user.lastname):
                     print("Invalid Last Name. Please enter again.")
-                    user.lastname = input("Enter Last Name: ").title()
+                    new_user.lastname = input("Enter Last Name: ").title()
             case 5 if currentUser.username == "super_admin":
-                select = 3
-                user.isadmin = not user.isadmin
-                user.role = "Admin" if user.isadmin else "Consultant"
+                select = 5
+                new_user.isadmin = not new_user.isadmin
+                new_user.role = "Admin" if new_user.isadmin else "Consultant"
 
 
 def admin_menu(admin: db.User):
@@ -548,8 +548,9 @@ def admin_menu(admin: db.User):
                 show_logs(admin)
             case 6:
                 clear_console()
-                backup_menu(admin)
-                break
+                should_logout = backup_menu(admin)
+                if should_logout:
+                    break
             case 7:
                 change_password(admin)
             case _:
@@ -716,21 +717,23 @@ def get_max(lst: list[Union[db.User, db.Member]]) -> int:
     return max_len
 
 
-def backup_menu(admin: db.User):
+def backup_menu(admin: db.User) -> bool:
+    """shows the menu that lets user create and restore and backups
+    returns whether a user should be logged out after, to prevent edge cases when restoring backups where an admin does not yet exist"""
     while True:
         clear_console()
         options = ["Return", "Create backup", "Restore backup"]
         selection, index = pick(options, title=f"{logo}\nBackup menu", indicator=">")
         match index:
             case 0:
-                return
+                return False
             case 1:
                 db.create_backup(admin)
                 show_message("Backup created successfully.")
+                return False
             case 2:
                 restore_backups(admin)
-                break
-
+                return True
             case _:
                 show_message("Invalid option.")
 
@@ -750,6 +753,7 @@ def restore_backups(admin: db.User):
                     restore_success = db.restore_backup(admin, backups[cast(int, index) - 1])
                     if restore_success:
                         show_message(f"Restored backup {backups[cast(int, index) - 1]}")
+                        return
                     else:
                         show_message(f"Could not restore backup")
         else:
