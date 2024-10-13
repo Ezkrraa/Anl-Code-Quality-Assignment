@@ -99,7 +99,7 @@ class User:
     firstname: str
     lastname: str
     registrationdate: str
-    isadmin: bool
+    # isadmin: bool
 
     def __init__(
         self,
@@ -109,7 +109,7 @@ class User:
         fname,
         lname,
         regdate,
-        isadmin=False,
+        # isadmin=False,
         uid: bytes = uuid4().bytes,
     ) -> None:
         self.id: UUID = UUID(bytes=uid)
@@ -119,11 +119,11 @@ class User:
         self.firstname: str = fname
         self.lastname: str = lname
         self.registrationdate: str = regdate
-        self.isadmin: bool = isadmin
+        # self.isadmin: bool = isadmin
 
     @classmethod
-    def fromtuple(cls, data: tuple[bytes, str, bytes, str, str, str, str, bool]):
-        return cls(data[1], data[2], data[3], data[4], data[5], data[6], bool(data[7]), data[0])
+    def fromtuple(cls, data: tuple[bytes, str, bytes, str, str, str, str]):
+        return cls(data[1], data[2], data[3], data[4], data[5], data[6], data[0])
 
     @classmethod
     def genRandom(cls):
@@ -133,7 +133,6 @@ class User:
         firstname = fake.first_name()
         lastname = fake.last_name()
         registrationdate = datetime.datetime.now().strftime("%Y-%m-%d")
-        isadmin = False
         return cls(
             username,
             password,
@@ -141,11 +140,10 @@ class User:
             firstname,
             lastname,
             registrationdate,
-            isadmin,
             uuid4().bytes,
         )
 
-    def toTuple(self) -> tuple[bytes, str, bytes, str, str, str, str, bool]:
+    def toTuple(self) -> tuple[bytes, str, bytes, str, str, str, str]:
         return (
             self.id.bytes,
             self.username,
@@ -154,13 +152,12 @@ class User:
             self.firstname,
             self.lastname,
             self.registrationdate,
-            self.isadmin,
+            # self.isadmin,
         )
 
     def __str__(self) -> str:
         return f"Name: {self.username}\n\
             Role: {self.role}\n\
-            Is {'' if self.isadmin else 'not '}an admin\n\
             Full name: {self.firstname} {self.lastname}\n\
             Registration Date: {self.registrationdate}"
 
@@ -175,7 +172,6 @@ class User:
             and self.firstname == value.firstname
             and self.lastname == value.lastname
             and self.registrationdate == value.registrationdate
-            and self.isadmin == value.isadmin
         )
 
     def encrypt(self, key):
@@ -193,6 +189,9 @@ class User:
         new_user.firstname = decrypt_data(key, self.firstname)
         new_user.lastname = decrypt_data(key, self.lastname)
         return new_user
+
+    def isadmin(self) -> bool:
+        return self.role == "Admin" or self.username == "super_admin"
 
 
 class Member:
@@ -346,8 +345,7 @@ def create_tables():
         role TEXT,
         firstname TEXT,
         lastname TEXT,
-        registrationdate TEXT,
-        isadmin BOOLEAN
+        registrationdate TEXT
         )""",
         """CREATE TABLE IF NOT EXISTS members (
         id CHAR(10) PRIMARY KEY,
@@ -428,7 +426,7 @@ def create_test_admin():
     testpw = "Admin_123?"
     bcryptpass = bcrypt.hashpw(testpw.encode("utf-8"), bcrypt.gensalt())
     cur = database_connection.cursor()
-    if cur.execute("SELECT 1 FROM users WHERE isadmin = 1").fetchone() != None:
+    if cur.execute("SELECT 1 FROM users").fetchone() != None:
         write_log_short(
             "",
             5,
@@ -438,12 +436,12 @@ def create_test_admin():
         return
     try:
         cur.execute(
-            "INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-            (User("admin", bcryptpass, "Admin", "mister admin", "a user", datetime.date.today(), True, uuid4().bytes).encrypt(load_public_key()).toTuple()),
+            "INSERT INTO users VALUES(?,?,?,?,?,?,?)",
+            (User("admin", bcryptpass, "Admin", "mister admin", "a user", datetime.date.today(), uuid4().bytes).encrypt(load_public_key()).toTuple()),
         )
         cur.execute(
-            "INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-            (User("user", bcryptpass, "Consultant", "mister user", "a user", datetime.date.today(), False, uuid4().bytes).encrypt(load_public_key()).toTuple()),
+            "INSERT INTO users VALUES(?,?,?,?,?,?,?)",
+            (User("user", bcryptpass, "Consultant", "mister user", "a user", datetime.date.today(), uuid4().bytes).encrypt(load_public_key()).toTuple()),
         )
         database_connection.commit()
         cur.close()
@@ -466,9 +464,9 @@ def create_test_admin():
 def seed_database():
     cursor = database_connection.cursor()
     seed_members = [Member.genrandom().encrypt(load_public_key()).toTuple() for _ in range(50)]
-    cursor.executemany("INSERT INTO members VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", seed_members)
+    cursor.executemany("INSERT INTO members VALUES(?,?,?,?,?,?,?,?,?,?)", seed_members)
     seed_users = [User.genRandom().encrypt(load_public_key()).toTuple() for _ in range(20)]
-    cursor.executemany("INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?)", seed_users)
+    cursor.executemany("INSERT INTO users VALUES(?,?,?,?,?,?,?)", seed_users)
     cursor.close()
     database_connection.commit()
     write_log_short("", 6, "Seeded successfully", "Successfully seeded members and users tables")
@@ -510,7 +508,7 @@ def edit_member(user: User, member: Member):
 
 # only admins and above can delete members
 def delete_member(admin: User, member: Member) -> bool:
-    if not (is_valid_user(admin) and admin.isadmin):
+    if not (is_valid_user(admin) and admin.isadmin()):
         write_log_short(
             admin.username,
             4,
@@ -557,12 +555,11 @@ def edit_user(admin: User, new_user: User, old_user: User):
         is_valid_user(admin)
         and admin.id == new_user.id
         and admin.username == new_user.username
-        and admin.isadmin == new_user.isadmin
         and admin.role == new_user.role
         and admin.registrationdate == new_user.registrationdate
     ):
         pass
-    elif is_valid_user(admin) and admin.isadmin:
+    elif is_valid_user(admin) and admin.isadmin():
         pass
     else:
         write_log_short(
@@ -574,10 +571,10 @@ def edit_user(admin: User, new_user: User, old_user: User):
         )
         return
     cur = database_connection.cursor()
-    cur.execute("REPLACE INTO users VALUES(?,?,?,?,?,?,?,?)", new_user.encrypt(load_public_key()).toTuple())
+    cur.execute("REPLACE INTO users VALUES(?,?,?,?,?,?,?)", new_user.encrypt(load_public_key()).toTuple())
     cur.close()
     database_connection.commit()
-    write_log_short(admin.username, 5, "User edited", f"Admin edited a user. Old user: {old_user.username} => New user: {new_user.username}", True)
+    write_log_short(admin.username, 5, "User edited", f"Admin edited a user. Old user: {old_user.username} => New user: {new_user.username}")
     return
 
 
@@ -599,7 +596,7 @@ def create_member(user: User, member: Member):
 
 # admin and above can create a user
 def create_user(admin: User, new_user: User) -> Union[Exception, None]:
-    if not (is_valid_user(admin) and admin.isadmin):
+    if not (is_valid_user(admin) and admin.isadmin()):
         write_log_short(
             admin.username,
             4,
@@ -608,7 +605,7 @@ def create_user(admin: User, new_user: User) -> Union[Exception, None]:
             True,
         )
         return Exception("PrivilegeError")
-    if new_user.isadmin and admin.username != "super_admin":
+    if new_user.isadmin() and admin.username != "super_admin":
         write_log_short(
             admin.username,
             4,
@@ -629,7 +626,7 @@ def create_user(admin: User, new_user: User) -> Union[Exception, None]:
         )
         return Exception("DuplicateError")
     cur = database_connection.cursor()
-    cur.execute("INSERT INTO users VALUES(?,?,?,?,?,?,?,?)", new_user.encrypt(load_public_key()).toTuple())
+    cur.execute("INSERT INTO users VALUES(?,?,?,?,?,?,?)", new_user.encrypt(load_public_key()).toTuple())
     database_connection.commit()
     write_log_short(admin.username, 5, "Admin created user", f"User {admin.username} created {new_user.role} {new_user.username}")
 
@@ -645,8 +642,8 @@ def delete_user(admin: User, user: User) -> bool:
             True,
         )
         return False
-    # if either admin isn't actually an admin, log and leave
-    elif not admin.isadmin:
+    # if admin isn't actually an admin, log and leave
+    elif not admin.isadmin():
         write_log_short(
             admin.username,
             4,
@@ -656,7 +653,7 @@ def delete_user(admin: User, user: User) -> bool:
         )
         return False
     # if trying to delete an admin without being super admin, log and leave
-    elif user.isadmin and admin.username != "super_admin":
+    elif user.isadmin() and admin.username != "super_admin":
         write_log_short(
             admin.username,
             4,
@@ -716,10 +713,12 @@ def get_all_users(user: User) -> list[User]:
     cur = database_connection.cursor()
     if user.username == "super_admin":
         users = cur.execute("SELECT * FROM users").fetchall()
+        return [User.fromtuple(row).decrypt(load_private_key()) for row in users]
     else:
-        users = cur.execute("SELECT * FROM users WHERE isadmin = 0 ORDER BY username").fetchall()
+        users = cur.execute("SELECT * FROM users").fetchall()
+        all_users = [User.fromtuple(row).decrypt(load_private_key()) for row in users]
         write_log_short(user.username, 5, "Admin fetched users", f"Admin fetched all users.")
-    return [User.fromtuple(row).decrypt(load_private_key()) for row in users]
+        return [user for user in all_users if user.role != "Admin"]
 
 
 def attempt_login(uname: str, attemptPassword: str) -> Exception | User:
@@ -781,7 +780,7 @@ def search_members_and_users(user: User, search_key: str) -> list[Union[User, Me
 
     members = get_all_members(user)
     users = get_all_users(user)
-    users.sort(key=(lambda x: x.isadmin))
+    # users.sort(key=(lambda x: x.isadmin))
     raw_search_key = search_key.lower()
 
     search_results = []
@@ -793,9 +792,9 @@ def search_members_and_users(user: User, search_key: str) -> list[Union[User, Me
         ):
             search_results.append(member)
 
-    if user.isadmin:  # Admins and super_admin can see members and normal users
+    if user.isadmin():  # Admins and super_admin can see members and normal users
         for current_user in users:
-            if not current_user.isadmin and (
+            if not current_user.isadmin() and (
                 raw_search_key in current_user.username.lower()
                 or raw_search_key in current_user.firstname.lower()
                 or raw_search_key in current_user.lastname.lower()
@@ -809,7 +808,7 @@ def search_members_and_users(user: User, search_key: str) -> list[Union[User, Me
             # Check if search_key is in any of the admin_user's fields
             if any(raw_search_key.lower() in str(getattr(admin_user, field, "")).lower() for field in vars(admin_user)):
                 # For super_admin, add other admins to the search results if the search key is in their fields
-                if admin_user.isadmin and admin_user not in search_results:
+                if admin_user.isadmin() and admin_user not in search_results:
                     search_results.append(admin_user)
 
     return search_results
@@ -822,7 +821,7 @@ def write_log_short(username: str, severity: int, desc: str, info: str, suspicio
 
 def write_log(logpoint: LogPoint):
     cursor = database_connection.cursor()
-    cursor.execute("INSERT INTO logs VALUES(?, ?, ?, ?, ?, ?, ?)", logpoint.encrypt(load_public_key()).toTuple())
+    cursor.execute("INSERT INTO logs VALUES(?,?,?,?,?,?,?)", logpoint.encrypt(load_public_key()).toTuple())
     cursor.close()
     database_connection.commit()
 
@@ -842,7 +841,7 @@ def get_all_logs(user: User) -> list[LogPoint]:
 
 
 def create_backup(admin: User):
-    if not is_valid_user(admin) or not admin.isadmin:
+    if not is_valid_user(admin) or not admin.isadmin():
         write_log_short(admin.username, 3, "Invalid user", f"Someone tried to create a backup without being a valid admin. User: {admin.username}", True)
         return False
     # Updated to include hours and minutes for multiple backups per day
@@ -859,7 +858,7 @@ def create_backup(admin: User):
 
 
 def restore_backup(admin: User, backup_date: str) -> bool:
-    if not is_valid_user(admin) or not admin.isadmin:
+    if not is_valid_user(admin) or not admin.isadmin():
         write_log_short(admin.username, 3, "Invalid user", f"Someone tried to restore a backup without being a valid admin. User: {admin.username}", True)
         return False
     backup_filename = f"{os.getcwd()}/backups/{backup_date}"  # Adjusted to current working directory

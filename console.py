@@ -77,7 +77,7 @@ def validate_int(number: str, min: int, max: int) -> bool:
 
 
 def to_main_menu(usr: db.User):
-    if usr.isadmin:
+    if usr.isadmin():
         admin_menu(usr)
     else:
         user_menu(usr)
@@ -237,7 +237,6 @@ def add_user(admin: db.User, make_admin: bool = False):
             fname=first_name,
             lname=last_name,
             regdate=datetime.date.today(),
-            isadmin=make_admin,
             uid=uuid4().bytes,
         )
         result = db.create_user(admin, new_consultant)
@@ -311,7 +310,7 @@ def show_members(user: db.User) -> None:
 def show_member(user: db.User, member: db.Member) -> None:
     while True:
         options = ["Return to user menu", "Edit information"]
-        if user.isadmin:
+        if user.isadmin():
             options.append("Delete member")
         result, index = pick(options=options, title=f"{logo}Member Info:\n{member}", indicator=">")
         match index:
@@ -319,7 +318,7 @@ def show_member(user: db.User, member: db.Member) -> None:
                 return
             case 1:
                 member = edit_member(user, member)
-            case 2 if user.isadmin:
+            case 2 if user.isadmin():
                 confirm_options = ["No", "Yes"]
                 _, index = pick(options=confirm_options, title=f"Are you sure you want to delete {member.fullname()}'s account?", indicator=">")
                 match index:
@@ -395,7 +394,7 @@ def edit_member(user: db.User, member: db.Member) -> db.Member:
                 member = change_member(7, member, new_value)
             case _:
                 clear_console()
-                new_value = input("Enter new value:")
+                new_value = input("Enter new value: ")
                 member = change_member(cast(int, index) - 2, member, new_value) if new_value != "" else member
 
 
@@ -403,24 +402,25 @@ def change_member(index: int, member: db.Member, new_value: str) -> db.Member:
     match index:
         case 0:
             if is_valid_input_str(r"^[A-Za-z]*$", new_value):
-                member.firstname = new_value
+                member.firstname = new_value.title()
         case 1:
             if is_valid_input_str(r"^[A-Za-z]*$", new_value):
-                member.lastname = new_value
+                member.lastname = new_value.title()
         case 2:
             if validate_int(new_value, 18, 100):
                 member.age = int(new_value)
         case 3:
+            new_value = new_value.upper()
             if new_value == "M" or new_value == "F" or new_value == "O":
                 member.gender = new_value
         case 4:
             if validate_int(new_value, 0, 600):
                 member.weight = int(new_value)
         case 5:
-            member.address = new_value
+            member.address = new_value.title()
         case 6:
             if is_valid_input_str(r"[^@]+@[^@]+\.[^@]+", new_value):
-                member.email = new_value
+                member.email = new_value.lower()
         case 7:
             if is_valid_input_str(r"^[0-9]{8}$", new_value):
                 member.phonenumber = "+31-6" + new_value
@@ -474,7 +474,7 @@ def edit_user(currentUser: db.User, user: db.User) -> db.User:
     while True:
         options = ["Return without saving", "Return and save", f"Username: {new_user.username}", f"First name: {new_user.firstname}", f"Last name: {new_user.lastname}"]
         if currentUser.username == "super_admin":
-            options.append(f"Is {'an' if new_user.isadmin else 'not an'} admin")
+            options.append(f"Is {'an' if new_user.isadmin() else 'not an'} admin")
         result, index = pick(
             options=options,
             title=f"{logo}Edit user info:",
@@ -488,7 +488,7 @@ def edit_user(currentUser: db.User, user: db.User) -> db.User:
                 db.edit_user(currentUser, new_user, user)
                 return new_user
             case 2:
-                new_user.username = input("Enter Username: ")
+                new_user.username = input("Enter Username: ").lower()
                 while not is_valid_input_str(r"^[a-zA-Z_][a-zA-Z0-9_'\.]{7,10}$", new_user.username):
                     print("Invalid Username. Please enter again.")
                     print("Username must be unique and have a length of at least 8 characters")
@@ -496,7 +496,7 @@ def edit_user(currentUser: db.User, user: db.User) -> db.User:
                     print("Must be started with a letter or underscores (_)")
                     print("Can contain letters (a-z), numbers (0-9), underscores (_), apostrophes ('), and periods (.)")
                     print("No distinguish between lowercase or uppercase letters")
-                    new_user.username = input("Enter Username: ")
+                    new_user.username = input("Enter Username: ").lower()
             case 3:
                 new_user.firstname = input("Enter First Name: ").title()
                 while not is_valid_input_str(r"^[A-Za-z]*$", new_user.firstname):
@@ -509,8 +509,7 @@ def edit_user(currentUser: db.User, user: db.User) -> db.User:
                     new_user.lastname = input("Enter Last Name: ").title()
             case 5 if currentUser.username == "super_admin":
                 select = 5
-                new_user.isadmin = not new_user.isadmin
-                new_user.role = "Admin" if new_user.isadmin else "Consultant"
+                new_user.role = "Consultant" if new_user.isadmin() else "Admin"
 
 
 def admin_menu(admin: db.User):
@@ -567,7 +566,6 @@ def super_admin_menu():
         "admin",
         "",
         -1,
-        True,
     )
     while True:
         su_admin_options = [
