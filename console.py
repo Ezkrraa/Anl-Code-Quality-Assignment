@@ -280,7 +280,7 @@ def change_password(usr: db.User):
             continue
         new_crypt_pw = bcrypt.hashpw(new_pw.encode("utf-8"), bcrypt.gensalt())
         usr.password = new_crypt_pw
-        db.edit_user(usr, usr, old_user)
+        db.edit_user(old_user, usr, old_user)
         show_message("Password changed successfully.")
         break
 
