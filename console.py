@@ -318,7 +318,7 @@ def show_member(user: db.User, member: db.Member) -> None:
             case 0:
                 return
             case 1:
-                edit_member(user, member)
+                member = edit_member(user, member)
             case 2 if user.isadmin:
                 confirm_options = ["No", "Yes"]
                 _, index = pick(options=confirm_options, title=f"Are you sure you want to delete {member.fullname()}'s account?", indicator=">")
@@ -341,7 +341,8 @@ def show_log(log: db.LogPoint) -> None:
                 return
 
 
-def edit_member(user: db.User, member: db.Member):
+def edit_member(user: db.User, member: db.Member) -> db.Member:
+    old_member = copy.deepcopy(member)
     while True:
         options = [
             "Return without saving",
@@ -358,10 +359,10 @@ def edit_member(user: db.User, member: db.Member):
         result, index = pick(options=options, title=f"{logo}Edit member info:", indicator=">")
         match index:
             case 0:
-                break
+                return old_member
             case 1:
                 db.edit_member(user, member)
-                break
+                return member
             case 7:
                 clear_console()
                 street_name = input("Enter Street Name: ")
@@ -387,6 +388,7 @@ def edit_member(user: db.User, member: db.Member):
                         break  # Exit loop if input is valid
                     except ValueError:
                         print("Invalid input. Please enter a valid number corresponding to your city.")
+                city = cities[city_choice]
                 member.address = f"{street_name}, {house_number}, {zip_code}, {city}"
             case 9:
                 new_value = input("Enter new value: +31-6")
