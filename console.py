@@ -62,6 +62,8 @@ def clear_console():
 
 
 def is_valid_input_str(pattern: str, input_value: str) -> bool:
+    if len(input_value) > 50 or len(input_value) < 1:
+        return False
     return bool(re.match(pattern, input_value))
 
 
@@ -407,8 +409,8 @@ def change_member(index: int, member: db.Member, new_value: str) -> db.Member:
             if validate_int(new_value, 18, 100):
                 member.age = int(new_value)
         case 3:
-            if new_value != "M" and new_value != "F" and new_value != "O":
-                member.gender = new_value  #
+            if new_value == "M" or new_value == "F" or new_value == "O":
+                member.gender = new_value  
         case 4:
             if validate_int(new_value, 0, 600):
                 member.weight = int(new_value)
@@ -506,6 +508,7 @@ def edit_user(currentUser: db.User, user: db.User) -> None:
             case 5 if currentUser.username == "super_admin":
                 select = 3
                 user.isadmin = not user.isadmin
+                user.role = "Admin" if user.isadmin else "Consultant"
 
 
 def admin_menu(admin: db.User):
@@ -546,6 +549,7 @@ def admin_menu(admin: db.User):
             case 6:
                 clear_console()
                 backup_menu(admin)
+                break
             case 7:
                 change_password(admin)
                 show_message("Changed password successfully.")
@@ -726,6 +730,8 @@ def backup_menu(admin: db.User):
                 show_message("Backup created successfully.")
             case 2:
                 restore_backups(admin)
+                break
+
             case _:
                 show_message("Invalid option.")
 
