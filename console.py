@@ -552,7 +552,6 @@ def admin_menu(admin: db.User):
                 break
             case 7:
                 change_password(admin)
-                show_message("Changed password successfully.")
             case _:
                 show_message("Invalid option.")
 
@@ -621,7 +620,7 @@ def login_screen() -> None:
         clear_console()
         show_logo()
         print("LOGIN SCREEN\nTo login to the application, enter your username:")
-        uname = input("> ")
+        uname = input("> ").lower()
         print("enter password:")
         unhashed_pw = getpass("> ")
         attempt = db.attempt_login(uname=uname, attemptPassword=unhashed_pw)
